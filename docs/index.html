@@ -540,7 +540,8 @@ function getFilteredData(query) {
   if (!query) return records;
   var q = query.trim().toLowerCase();
   return records.filter(function(r) {
-    return r.number.toLowerCase().indexOf(q) !== -1 ||
+    var num = r.number.toLowerCase();
+    return num.indexOf(q) !== -1 || q.indexOf(num) !== -1 ||
       (r.customer && r.customer.toLowerCase().indexOf(q) !== -1) ||
       (r.region && r.region.toLowerCase().indexOf(q) !== -1) ||
       (r.notes && r.notes.toLowerCase().indexOf(q) !== -1);
