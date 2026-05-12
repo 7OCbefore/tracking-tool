@@ -1059,6 +1059,142 @@ document.addEventListener('DOMContentLoaded', function() {
 
 });
 
+// === Barcode Scanning ===
+
+var barcodeDetector = null;
+var scanStream = null;
+
+function isScanSupported() {
+  return 'BarcodeDetector' in window;
+}
+
+function initScanSupport() {
+  var scanBtn = document.getElementById('btn-scan');
+  if (!isScanSupported()) {
+    scanBtn.classList.add('hidden');
+    return;
+  }
+  if (BarcodeDetector.getSupportedFormats) {
+    BarcodeDetector.getSupportedFormats().then(function(formats) {
+      var supported = formats.some(function(f) {
+        return ['code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf'].indexOf(f) !== -1;
+      });
+      if (!supported) scanBtn.classList.add('hidden');
+    }).catch(function() {});
+  }
+}
+
+initScanSupport();
+document.getElementById('btn-scan').addEventListener('click', startScanner);
+document.getElementById('btn-close-camera').addEventListener('click', stopScanner);
+
+function startScanner() {
+  var overlay = document.getElementById('camera-overlay');
+  var video = document.getElementById('camera-view');
+  var status = document.getElementById('camera-status');
+  var resultDiv = document.getElementById('scan-result');
+  overlay.classList.remove('hidden');
+  resultDiv.innerHTML = '正在启动相机...';
+
+  try {
+    barcodeDetector = new BarcodeDetector({
+      formats: ['code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf']
+    });
+  } catch (e) {
+    resultDiv.innerHTML = '<span style="color:#ff4d4f">此设备不支持扫码功能，请使用搜索</span>';
+    setTimeout(stopScanner, 2000);
+    return;
+  }
+
+  navigator.mediaDevices.getUserMedia({
+    video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }
+  }).then(function(stream) {
+    scanStream = stream;
+    video.srcObject = stream;
+    return video.play();
+  }).then(function() {
+    status.textContent = '对准面单条形码';
+    resultDiv.innerHTML = '正在识别...';
+    scanLoop(video, resultDiv, status);
+  }).catch(function() {
+    resultDiv.innerHTML = '<span style="color:#ff4d4f">无法打开相机</span>';
+    setTimeout(stopScanner, 1500);
+  });
+}
+
+function stopScanner() {
+  document.getElementById('camera-overlay').classList.add('hidden');
+  scanLoopActive = false;
+  if (scanStream) {
+    scanStream.getTracks().forEach(function(t) { t.stop(); });
+    scanStream = null;
+  }
+  barcodeDetector = null;
+}
+
+var scanLoopActive = false;
+
+function scanLoop(video, resultDiv, statusEl) {
+  if (scanLoopActive) return;
+  scanLoopActive = true;
+  var scanStart = Date.now();
+  var lastNumber = '';
+
+  function tick() {
+    if (!scanLoopActive) return;
+    barcodeDetector.detect(video).then(function(barcodes) {
+      if (barcodes.length > 0) {
+        var number = barcodes[0].rawValue.trim();
+        if (number !== lastNumber) {
+          lastNumber = number;
+          var matches = getFilteredData(number);
+          if (matches.length > 0) {
+            var record = matches[0];
+            resultDiv.innerHTML =
+              '<div class="scanned-number">' + escapeHtml(number) + '</div>' +
+              '<div class="scan-match">已匹配：' + escapeHtml(record.customer || '未知') +
+              '（' + escapeHtml(record.region || '未知') + '）' +
+              (record.received ? ' · 已收到' : ' · 待收件') + '</div>' +
+              '<button class="scan-retry-btn" onclick="showMatchedRecord()">查看详情</button>';
+            window._lastScannedId = record.id;
+            statusEl.textContent = '匹配成功！';
+            scanLoopActive = false;
+            return;
+          } else {
+            resultDiv.innerHTML =
+              '<div class="scanned-number">' + escapeHtml(number) + '</div>' +
+              '<div class="scan-no-match">未找到匹配记录</div>' +
+              '<div style="font-size:13px;color:#999;margin-top:6px">该单号不在列表中，继续扫描...</div>';
+            statusEl.textContent = '未匹配，继续扫描';
+          }
+        }
+      }
+    }).catch(function() {});
+
+    if (Date.now() - scanStart > 30000) {
+      resultDiv.innerHTML = '<div style="color:#999">扫码超时，请点击关闭后重试</div>';
+      scanLoopActive = false;
+      return;
+    }
+    setTimeout(tick, 300);
+  }
+  tick();
+}
+
+function showMatchedRecord() {
+  if (window._lastScannedId) {
+    stopScanner();
+    showDetail(window._lastScannedId);
+  }
+}
+
+// === Service Worker ===
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('sw.js').catch(function() {});
+  });
+}
+
 </script>
 </body>
 </html>
