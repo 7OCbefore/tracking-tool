@@ -966,6 +966,7 @@ function startScanner() {
 function stopScanner() {
   var overlay = document.getElementById('camera-overlay');
   overlay.classList.add('hidden');
+  scanLoopActive = false;
   if (scanStream) {
     scanStream.getTracks().forEach(function(t) { t.stop(); });
     scanStream = null;
@@ -979,7 +980,7 @@ function scanLoop(video, resultDiv, statusEl) {
   if (scanLoopActive) return;
   scanLoopActive = true;
 
-  var scanCount = 0;
+  var scanStart = Date.now();
   var lastNumber = '';
 
   function tick() {
@@ -1018,7 +1019,7 @@ function scanLoop(video, resultDiv, statusEl) {
     });
 
     // Safety limit: stop after ~30 seconds
-    if (scanCount > 100) {
+    if (Date.now() - scanStart > 30000) {
       resultDiv.innerHTML = '<div style="color:#999">扫码超时，请点击关闭后重试</div>';
       scanLoopActive = false;
       return;
