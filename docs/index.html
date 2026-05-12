@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#1890ff">
-<title>快递单号管理 v2.5</title>
+<title>快递单号管理 v2.6</title>
 <link rel="manifest" href="manifest.json">
 <style>
 * {
@@ -264,48 +264,11 @@ header h1 { font-size: 18px; font-weight: 600; color: #1a1a1a; }
 #camera-header .header-btn { color: #fff; }
 #camera-status { font-size: 14px; color: #ccc; }
 
-/* Camera body with scan frame overlay */
+/* Camera body */
 #camera-body {
   flex: 1; position: relative; overflow: hidden;
 }
 #camera-view { width: 100%; height: 100%; object-fit: cover; }
-
-/* Scan guide frame */
-#scan-frame {
-  position: absolute; top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  width: 250px; height: 80px;
-  border: 1px solid rgba(255,255,255,0.3);
-  border-radius: 8px;
-}
-.sf-corner {
-  position: absolute; width: 20px; height: 20px;
-  border-color: #52c41a; border-style: solid;
-}
-.sf-corner.tl { top: -2px; left: -2px; border-width: 3px 0 0 3px; border-radius: 6px 0 0 0; }
-.sf-corner.tr { top: -2px; right: -2px; border-width: 3px 3px 0 0; border-radius: 0 6px 0 0; }
-.sf-corner.bl { bottom: -2px; left: -2px; border-width: 0 0 3px 3px; border-radius: 0 0 0 6px; }
-.sf-corner.br { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; border-radius: 0 0 6px 0; }
-
-/* Scan line animation */
-#scan-line {
-  position: absolute; top: 0; left: 4px; right: 4px; height: 2px;
-  background: #52c41a; border-radius: 1px; box-shadow: 0 0 8px #52c41a;
-  animation: scanMove 2s ease-in-out infinite;
-}
-@keyframes scanMove {
-  0%, 100% { top: 4px; }
-  50% { top: calc(100% - 6px); }
-}
-
-/* Green flash on barcode detect */
-#scan-flash {
-  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(82,196,26,0.15);
-  transition: opacity 0.1s;
-}
-#scan-flash.flash { opacity: 1; }
-#scan-flash.hidden { opacity: 0; }
 
 /* Result card overlay on video */
 #scan-result-card {
@@ -401,14 +364,6 @@ header h1 { font-size: 18px; font-weight: 600; color: #1a1a1a; }
   </div>
   <div id="camera-body">
     <video id="camera-view" autoplay playsinline></video>
-    <div id="scan-frame">
-      <div class="sf-corner tl"></div>
-      <div class="sf-corner tr"></div>
-      <div class="sf-corner bl"></div>
-      <div class="sf-corner br"></div>
-      <div id="scan-line"></div>
-    </div>
-    <div id="scan-flash" class="hidden"></div>
     <div id="scan-result-card" class="hidden">
       <div id="src-icon"></div>
       <div id="src-number"></div>
@@ -1236,7 +1191,6 @@ function scanLoop(video) {
   scanLoopActive = true;
   var scanStart = Date.now();
   var lastNumber = '';
-  var flashEl = document.getElementById('scan-flash');
   var statusEl = document.getElementById('camera-status');
 
   function showResultOnVideo(matched, number, customer, region) {
@@ -1280,14 +1234,6 @@ function scanLoop(video) {
     barcodeDetector.detect(video).then(function(barcodes) {
       if (barcodes.length > 0) {
         var number = barcodes[0].rawValue.trim();
-        // Flash green on any detection
-        flashEl.classList.remove('hidden');
-        flashEl.classList.add('flash');
-        setTimeout(function() {
-          flashEl.classList.remove('flash');
-          flashEl.classList.add('hidden');
-        }, 150);
-
         if (number !== lastNumber) {
           lastNumber = number;
           statusEl.textContent = '识别中...';
