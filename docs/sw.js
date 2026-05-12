@@ -1,5 +1,5 @@
 // Service Worker for offline caching
-var CACHE_NAME = 'tracking-tool-v1';
+var CACHE_NAME = 'tracking-tool-v2';
 var URLS_TO_CACHE = [
   './',
   './index.html',
@@ -25,14 +25,22 @@ self.addEventListener('activate', function(event) {
           return caches.delete(name);
         })
       );
+    }).then(function() {
+      return self.clients.claim();
     })
   );
 });
 
 self.addEventListener('fetch', function(event) {
+  // Network first for HTML, cache fallback for offline
   event.respondWith(
-    caches.match(event.request).then(function(response) {
-      return response || fetch(event.request);
+    fetch(event.request).then(function(response) {
+      return caches.open(CACHE_NAME).then(function(cache) {
+        cache.put(event.request, response.clone());
+        return response;
+      });
+    }).catch(function() {
+      return caches.match(event.request);
     })
   );
 });
