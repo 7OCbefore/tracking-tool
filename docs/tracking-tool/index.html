@@ -830,6 +830,70 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
 });
+
+// === Detail Screen ===
+
+var currentDetailId = null;
+
+function showDetail(id) {
+  currentDetailId = id;
+  var record = appData.find(function(r) { return r.id === id; });
+  if (!record) return;
+
+  document.getElementById('detail-number').textContent = record.number;
+  document.getElementById('detail-customer').textContent = record.customer;
+  document.getElementById('detail-region').textContent = record.region;
+  document.getElementById('detail-date').textContent = record.date;
+  document.getElementById('detail-notes').textContent = record.notes || '无';
+
+  var statusEl = document.getElementById('detail-status');
+  var toggleBtn = document.getElementById('btn-toggle-receive');
+
+  if (record.received) {
+    statusEl.textContent = '已收到';
+    statusEl.style.color = '#389e0d';
+    toggleBtn.textContent = '标记为未收到';
+    toggleBtn.className = 'btn-secondary btn-large';
+  } else {
+    statusEl.textContent = '待收件';
+    statusEl.style.color = '#d46b08';
+    toggleBtn.textContent = '标记为已收到';
+    toggleBtn.className = 'btn-primary btn-large';
+  }
+
+  showScreen('screen-detail');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+
+  // Back from detail
+  document.getElementById('btn-back-from-detail').addEventListener('click', function() {
+    showScreen('screen-list');
+    render();
+  });
+
+  // Toggle received status
+  document.getElementById('btn-toggle-receive').addEventListener('click', function() {
+    if (currentDetailId) {
+      toggleReceived(currentDetailId);
+      showDetail(currentDetailId);
+      render();
+    }
+  });
+
+  // Delete with confirmation
+  document.getElementById('btn-delete').addEventListener('click', function() {
+    if (!currentDetailId) return;
+    if (confirm('确定要删除这条记录吗？')) {
+      deleteRecord(currentDetailId);
+      currentDetailId = null;
+      showScreen('screen-list');
+      render();
+    }
+  });
+
+});
+
 </script>
 </body>
 </html>
