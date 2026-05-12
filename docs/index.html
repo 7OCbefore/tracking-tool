@@ -623,7 +623,7 @@ function loadData() {
     var raw = localStorage.getItem(STORAGE_KEY);
     appData = raw ? JSON.parse(raw) : [];
     // Migrate V1 data
-    if (appData.length > 0 && appData[0].schemaVersion !== 2) {
+    if (appData.length > 0 && appData[0] && appData[0].schemaVersion !== 2) {
       appData.forEach(function(r) {
         r.schemaVersion = 2;
       });
