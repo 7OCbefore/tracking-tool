@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#1890ff">
-<title>快递单号管理 v2.3</title>
+<title>快递单号管理 v2.4</title>
 <link rel="manifest" href="manifest.json">
 <style>
 * {
@@ -270,6 +270,22 @@ header h1 { font-size: 18px; font-weight: 600; color: #1a1a1a; }
 #scan-result .scan-no-match { color: #ff4d4f; }
 #scan-result .scan-retry-btn { margin-top: 8px; padding: 8px 20px; border: 1px solid #fff; border-radius: 8px; background: transparent; color: #fff; font-size: 15px; cursor: pointer; }
 
+/* Scan match banner */
+.scan-match-banner {
+  padding: 16px; text-align: center;
+}
+.scan-match-banner .smb-icon {
+  width: 48px; height: 48px; border-radius: 50%; background: #52c41a; color: #fff;
+  font-size: 26px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 10px;
+}
+.scan-match-banner .smb-detail { font-size: 16px; color: #eee; margin: 6px 0 10px; }
+.scan-match-banner .smb-btn {
+  padding: 10px 28px; border: none; border-radius: 8px; background: #1890ff; color: #fff;
+  font-size: 16px; font-weight: 500; cursor: pointer;
+}
+.scan-match-banner .smb-btn:active { background: #096dd9; }
+
 /* === Utility === */
 .hidden { display: none !important; }
 
@@ -285,7 +301,7 @@ header h1 { font-size: 18px; font-weight: 600; color: #1a1a1a; }
 <!-- ====== Screen 1: Main List ====== -->
 <div id="screen-list" class="screen active">
   <header>
-    <h1>快递单号 v2.3</h1>
+    <h1>快递单号 v2.4</h1>
     <div id="stats"></div>
   </header>
 
@@ -747,6 +763,7 @@ function validateAddForm(number, customer, region) {
 
 // === Init ===
 loadData();
+render();
 
 // === Render ===
 
@@ -1165,20 +1182,21 @@ function scanLoop(video, resultDiv, statusEl) {
             var record = matches[0];
             if (!record.received) toggleReceived(record.id);
             resultDiv.innerHTML =
-              '<div class="scanned-number">' + escapeHtml(number) + '</div>' +
-              '<div class="scan-match">已匹配：' + escapeHtml(record.customer || '未知') +
-              '（' + escapeHtml(record.region || '未知') + '） · 已收到</div>' +
-              '<button class="scan-retry-btn" onclick="showMatchedRecord()">查看详情</button>';
+              '<div class="scan-match-banner">' +
+                '<div class="smb-icon">✓</div>' +
+                '<div class="scanned-number">' + escapeHtml(number) + '</div>' +
+                '<div class="smb-detail">' + escapeHtml(record.customer || '未知') +
+                ' · ' + escapeHtml(record.region || '未知') + ' · 已收到</div>' +
+                '<button class="smb-btn" onclick="showMatchedRecord()">查看详情</button>' +
+              '</div>';
             window._lastScannedId = record.id;
-            statusEl.textContent = '匹配成功！';
-            scanLoopActive = false;
-            return;
+            statusEl.textContent = '✅ 已匹配';
           } else {
             resultDiv.innerHTML =
               '<div class="scanned-number">' + escapeHtml(number) + '</div>' +
               '<div class="scan-no-match">未找到匹配记录</div>' +
               '<div style="font-size:13px;color:#999;margin-top:6px">该单号不在列表中，继续扫描...</div>';
-            statusEl.textContent = '未匹配，继续扫描';
+            statusEl.textContent = '未匹配';
           }
         }
       }
