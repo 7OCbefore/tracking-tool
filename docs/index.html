@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#1890ff">
-<title>快递单号管理 v2.6</title>
+<title>快递单号管理 v3.0</title>
 <link rel="manifest" href="manifest.json">
 <style>
 * {
@@ -341,7 +341,7 @@ header h1 { font-size: 18px; font-weight: 600; color: #1a1a1a; }
 <!-- ====== Screen 1: Main List ====== -->
 <div id="screen-list" class="screen active">
   <header>
-    <h1>快递单号 v2.6</h1>
+    <h1>快递单号 v3.0</h1>
     <div id="stats"></div>
   </header>
 
@@ -1132,7 +1132,10 @@ function render() {
   var total = appData.length;
   var received = appData.filter(function(r) { return r.received; }).length;
   var pending = total - received;
-  statsEl.textContent = '共' + total + '条 · 已收' + received + ' · 待收' + pending;
+  var statsText = '共' + total + '条 · 已收' + received + ' · 待收' + pending;
+  var archiveDate = getLastArchiveDate();
+  if (archiveDate) statsText += ' | 归档: ' + archiveDate;
+  statsEl.textContent = statsText;
 
   // Imported view banner
   var existingBanner = document.getElementById('import-banner');
