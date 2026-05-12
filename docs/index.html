@@ -511,6 +511,8 @@ function openDB() {
       while (dbQueue.length > 0) { dbQueue.shift()(); }
     };
     req.onerror = function(e) {
+      dbReady = false;
+      while (dbQueue.length > 0) { dbQueue.shift()(); }
       reject(e.target.error);
     };
   });
@@ -633,28 +635,30 @@ function dbCount() {
 // === Data CRUD ===
 
 function loadData() {
-  try {
-    var raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      appData = JSON.parse(raw);
-      if (appData.length > 0) {
-        dbAddMany(appData).then(function() {
-          localStorage.removeItem(STORAGE_KEY);
-        }).catch(function() {});
+  return new Promise(function(resolve) {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        appData = JSON.parse(raw);
+        if (appData.length > 0) {
+          dbAddMany(appData).then(function() {
+            localStorage.removeItem(STORAGE_KEY);
+            resolve();
+          }).catch(function() { resolve(); });
+          return;
+        }
       }
+    } catch (e) { appData = []; }
+    if (appData.length === 0) {
+      dbGetAllRecords().then(function(records) {
+        records.sort(function(a, b) { return b.createdAt - a.createdAt; });
+        appData = records;
+        resolve();
+      }).catch(function() { appData = []; resolve(); });
+    } else {
+      resolve();
     }
-  } catch (e) {
-    appData = [];
-  }
-  if (appData.length === 0) {
-    dbGetAllRecords().then(function(records) {
-      records.sort(function(a, b) { return b.createdAt - a.createdAt; });
-      appData = records;
-      render();
-    }).catch(function() {
-      appData = [];
-    });
-  }
+  });
 }
 
 function saveRecord(record) {
@@ -941,7 +945,7 @@ function validateAddForm(number, customer, region) {
 }
 
 // === Init ===
-openDB().then(function() { loadData(); }).then(function() { render(); }).catch(function() { render(); });
+openDB().then(function() { return loadData(); }).then(function() { render(); }).catch(function() { render(); });
 
 // === Render ===
 
