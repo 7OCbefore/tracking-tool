@@ -749,6 +749,87 @@ function escapeHtml(text) {
 // === Init ===
 loadData();
 render();
+
+// === Screen Navigation ===
+
+function showScreen(screenId) {
+  var screens = document.querySelectorAll('.screen');
+  for (var i = 0; i < screens.length; i++) {
+    screens[i].classList.remove('active');
+  }
+  document.getElementById(screenId).classList.add('active');
+}
+
+// === Form Handlers ===
+
+document.addEventListener('DOMContentLoaded', function() {
+
+  // FAB → show add screen
+  document.getElementById('btn-add').addEventListener('click', function() {
+    document.getElementById('add-form').reset();
+    showScreen('screen-add');
+    setTimeout(function() {
+      document.getElementById('input-number').focus();
+    }, 300);
+  });
+
+  // Back from add screen
+  document.getElementById('btn-back-from-add').addEventListener('click', function() {
+    showScreen('screen-list');
+    render();
+  });
+
+  // Save
+  document.getElementById('add-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var number = document.getElementById('input-number').value.trim();
+    var customer = document.getElementById('input-customer').value.trim();
+    var region = document.getElementById('input-region').value.trim();
+    var notes = document.getElementById('input-notes').value.trim();
+
+    if (!number || !customer || !region) {
+      alert('请填写快递单号和客户信息');
+      return;
+    }
+
+    addRecord(number, customer, region, notes);
+    this.reset();
+    showScreen('screen-list');
+    render();
+  });
+
+  // Save and continue adding
+  document.getElementById('btn-save-continue').addEventListener('click', function() {
+    var number = document.getElementById('input-number').value.trim();
+    var customer = document.getElementById('input-customer').value.trim();
+    var region = document.getElementById('input-region').value.trim();
+    var notes = document.getElementById('input-notes').value.trim();
+
+    if (!number || !customer || !region) {
+      alert('请填写快递单号和客户信息');
+      return;
+    }
+
+    addRecord(number, customer, region, notes);
+    document.getElementById('add-form').reset();
+    setTimeout(function() {
+      document.getElementById('input-number').focus();
+    }, 200);
+  });
+
+  // Search with real-time filtering
+  document.getElementById('search-input').addEventListener('input', function() {
+    render();
+  });
+
+  // Clear search button
+  document.getElementById('btn-clear-search').addEventListener('click', function() {
+    document.getElementById('search-input').value = '';
+    document.getElementById('search-input').focus();
+    render();
+  });
+
+});
 </script>
 </body>
 </html>
