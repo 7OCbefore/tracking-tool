@@ -1,6 +1,6 @@
 {
-  "name": "快递单号管理 v2.4",
-  "short_name": "快递 v2.4",
+  "name": "快递单号管理 v2.5",
+  "short_name": "快递 v2.5",
   "description": "记录和查询快递单号",
   "start_url": ".",
   "display": "standalone",
