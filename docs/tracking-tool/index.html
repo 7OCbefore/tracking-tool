@@ -3,10 +3,495 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#1890ff">
 <title>快递单号管理</title>
 <link rel="manifest" href="manifest.json">
 <style>
-/* CSS in Task 2 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: #f5f5f5;
+  color: #333;
+  font-size: 16px;
+  line-height: 1.5;
+  overscroll-behavior: none;
+}
+
+/* === Screen Management === */
+.screen {
+  display: none;
+  min-height: 100dvh;
+  flex-direction: column;
+}
+.screen.active {
+  display: flex;
+}
+
+/* === Header === */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #fff;
+  border-bottom: 1px solid #e8e8e8;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  min-height: 52px;
+}
+
+header h1 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.header-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: #1890ff;
+  padding: 8px 4px;
+  cursor: pointer;
+  min-width: 60px;
+  text-align: left;
+}
+
+#stats {
+  font-size: 13px;
+  color: #888;
+}
+
+/* === Search Bar === */
+#search-bar {
+  display: flex;
+  gap: 0;
+  padding: 10px 16px;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+  position: sticky;
+  top: 52px;
+  z-index: 9;
+}
+
+#search-input {
+  flex: 1;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid #e0e0e0;
+  border-radius: 22px;
+  font-size: 16px;
+  outline: none;
+  background: #f8f8f8;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+#search-input:focus {
+  border-color: #1890ff;
+  background: #fff;
+}
+
+#btn-clear-search {
+  position: absolute;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #c0c0c0;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* === Card List === */
+#card-list {
+  flex: 1;
+  padding: 12px 16px;
+  padding-bottom: 80px;
+}
+
+.record-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+  position: relative;
+  border-left: 4px solid #ffa940;
+}
+
+.record-card.received {
+  border-left-color: #73d13d;
+}
+
+.record-card:active {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.card-number {
+  font-size: 18px;
+  font-weight: 600;
+  font-family: "Courier New", monospace;
+  letter-spacing: 1px;
+  color: #1a1a1a;
+  margin-bottom: 6px;
+  word-break: break-all;
+}
+
+.card-meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 14px;
+  color: #666;
+}
+
+.card-meta span {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.card-status {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.card-status.pending {
+  background: #fff7e6;
+  color: #d46b08;
+}
+
+.card-status.received {
+  background: #f6ffed;
+  color: #389e0d;
+}
+
+.card-date {
+  font-size: 12px;
+  color: #bbb;
+  margin-top: 6px;
+}
+
+/* === Empty State === */
+#empty-state {
+  text-align: center;
+  padding: 80px 20px;
+}
+
+#empty-state .empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+#empty-state p {
+  font-size: 16px;
+  color: #999;
+}
+
+#empty-state .empty-hint {
+  font-size: 14px;
+  color: #bbb;
+  margin-top: 8px;
+}
+
+/* === FAB (Floating Action Buttons) === */
+.fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #1890ff;
+  color: #fff;
+  border: none;
+  font-size: 28px;
+  line-height: 1;
+  box-shadow: 0 4px 12px rgba(24,144,255,0.4);
+  cursor: pointer;
+  z-index: 20;
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fab:active {
+  transform: scale(0.92);
+  box-shadow: 0 2px 6px rgba(24,144,255,0.3);
+}
+
+.fab-scan {
+  position: fixed;
+  bottom: 92px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #52c41a;
+  color: #fff;
+  border: none;
+  font-size: 24px;
+  box-shadow: 0 4px 12px rgba(82,196,26,0.4);
+  cursor: pointer;
+  z-index: 20;
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fab-scan:active {
+  transform: scale(0.92);
+  box-shadow: 0 2px 6px rgba(82,196,26,0.3);
+}
+
+/* === Add Form Screen === */
+#screen-add {
+  background: #fff;
+}
+
+.form-group {
+  padding: 16px 20px 0;
+}
+
+.form-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #555;
+  margin-bottom: 6px;
+}
+
+.form-group input {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 17px;
+  outline: none;
+  transition: border-color 0.2s;
+  background: #fafafa;
+}
+
+.form-group input:focus {
+  border-color: #1890ff;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(24,144,255,0.1);
+}
+
+.form-group input::placeholder {
+  color: #c0c0c0;
+}
+
+.form-actions {
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn-primary {
+  height: 50px;
+  border: none;
+  border-radius: 10px;
+  font-size: 17px;
+  font-weight: 500;
+  background: #1890ff;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primary:active {
+  background: #096dd9;
+}
+
+.btn-secondary {
+  height: 50px;
+  border: 1px solid #d9d9d9;
+  border-radius: 10px;
+  font-size: 16px;
+  background: #fff;
+  color: #555;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-secondary:active {
+  background: #f5f5f5;
+}
+
+.btn-danger {
+  height: 50px;
+  border: 1px solid #ff4d4f;
+  border-radius: 10px;
+  font-size: 16px;
+  background: #fff;
+  color: #ff4d4f;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-danger:active {
+  background: #fff2f0;
+}
+
+.btn-large {
+  width: 100%;
+}
+
+/* === Detail Screen === */
+#detail-content {
+  padding: 20px;
+  flex: 1;
+}
+
+.detail-field {
+  margin-bottom: 18px;
+}
+
+.detail-field label {
+  font-size: 13px;
+  color: #999;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.detail-value {
+  font-size: 17px;
+  color: #333;
+  word-break: break-all;
+}
+
+.detail-value.large {
+  font-size: 22px;
+  font-weight: 600;
+  font-family: "Courier New", monospace;
+  letter-spacing: 1px;
+}
+
+.detail-actions {
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* === Match Highlight === */
+.highlight {
+  background: #fff3cd;
+  padding: 1px 3px;
+  border-radius: 2px;
+}
+
+/* === Utility === */
+.hidden {
+  display: none !important;
+}
+
+/* === Camera Overlay === */
+#camera-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+
+#camera-overlay.hidden {
+  display: none;
+}
+
+#camera-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(0,0,0,0.8);
+  color: #fff;
+  z-index: 2;
+}
+
+#camera-header .header-btn {
+  color: #fff;
+}
+
+#camera-status {
+  font-size: 14px;
+  color: #ccc;
+}
+
+#camera-view {
+  flex: 1;
+  width: 100%;
+  object-fit: cover;
+}
+
+#scan-result {
+  padding: 16px;
+  background: rgba(0,0,0,0.85);
+  color: #fff;
+  text-align: center;
+  font-size: 15px;
+  min-height: 60px;
+}
+
+#scan-result .scanned-number {
+  font-size: 20px;
+  font-weight: 600;
+  font-family: "Courier New", monospace;
+  color: #52c41a;
+  letter-spacing: 1px;
+}
+
+#scan-result .scan-match {
+  color: #52c41a;
+  font-weight: 500;
+}
+
+#scan-result .scan-no-match {
+  color: #ff4d4f;
+}
+
+#scan-result .scan-retry-btn {
+  margin-top: 8px;
+  padding: 8px 20px;
+  border: 1px solid #fff;
+  border-radius: 8px;
+  background: transparent;
+  color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+}
 </style>
 </head>
 <body>
