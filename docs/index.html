@@ -607,16 +607,28 @@ header h1 {
 </div>
 
 <script>
-// === Data Layer ===
+// === Data Layer V2 ===
 
-const STORAGE_KEY = 'tracking_data_v1';
-
-let appData = [];
+var STORAGE_KEY = 'tracking_data_v2';
+var INPUT_KEY = 'tracking_last_input';
+var appData = [];
+var currentTab = 'pending';   // 'pending' | 'received'
+var batchMode = false;
+var batchSelected = {};
+var pendingDeleteId = null;
+var pendingDeleteTimer = null;
 
 function loadData() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    var raw = localStorage.getItem(STORAGE_KEY);
     appData = raw ? JSON.parse(raw) : [];
+    // Migrate V1 data
+    if (appData.length > 0 && appData[0].schemaVersion !== 2) {
+      appData.forEach(function(r) {
+        r.schemaVersion = 2;
+      });
+      saveData();
+    }
   } catch (e) {
     appData = [];
   }
@@ -631,422 +643,281 @@ function generateId() {
 }
 
 function addRecord(number, customer, region, notes) {
-  const record = {
+  var record = {
     id: generateId(),
     number: number.trim(),
-    customer: customer.trim(),
-    region: region.trim(),
+    customer: customer ? customer.trim() : '',
+    region: region ? region.trim() : '',
     notes: notes ? notes.trim() : '',
     date: new Date().toLocaleDateString('zh-CN', {
       year: 'numeric', month: '2-digit', day: '2-digit'
     }),
     received: false,
     receivedAt: null,
-    createdAt: Date.now()
+    createdAt: Date.now(),
+    schemaVersion: 2
   };
   appData.unshift(record);
   saveData();
+  saveLastInput(record.customer, record.region);
   return record;
 }
 
 function deleteRecord(id) {
-  appData = appData.filter(r => r.id !== id);
+  appData = appData.filter(function(r) { return r.id !== id; });
   saveData();
 }
 
+function softDelete(id) {
+  var record = appData.find(function(r) { return r.id === id; });
+  if (!record) return;
+  pendingDeleteId = id;
+  showToast('已删除 ' + record.number, '撤销', function() {
+    undoDelete();
+  });
+  if (pendingDeleteTimer) clearTimeout(pendingDeleteTimer);
+  pendingDeleteTimer = setTimeout(function() {
+    if (pendingDeleteId === id) {
+      deleteRecord(id);
+      pendingDeleteId = null;
+    }
+    hideToast();
+  }, 5000);
+}
+
+function undoDelete() {
+  if (pendingDeleteId) {
+    pendingDeleteId = null;
+    hideToast();
+    render();
+  }
+}
+
 function toggleReceived(id) {
-  const record = appData.find(r => r.id === id);
+  var record = appData.find(function(r) { return r.id === id; });
   if (!record) return;
   record.received = !record.received;
   record.receivedAt = record.received ? Date.now() : null;
   saveData();
 }
 
-function getFilteredData(query) {
-  if (!query) return appData;
-  const q = query.trim().toLowerCase();
-  return appData.filter(r =>
-    r.number.toLowerCase().includes(q) ||
-    r.customer.toLowerCase().includes(q) ||
-    r.region.toLowerCase().includes(q) ||
-    (r.notes && r.notes.toLowerCase().includes(q))
-  );
-}
-
-// === Render ===
-
-function render() {
-  var query = document.getElementById('search-input').value;
-  var data = getFilteredData(query);
-  var container = document.getElementById('card-list');
-  var emptyState = document.getElementById('empty-state');
-  var statsEl = document.getElementById('stats');
-  var clearBtn = document.getElementById('btn-clear-search');
-
-  // Stats
-  var total = appData.length;
-  var received = appData.filter(function(r) { return r.received; }).length;
-  var pending = total - received;
-  statsEl.textContent = '共' + total + '条 · 已收' + received + ' · 待收' + pending;
-
-  // Clear button visibility
-  if (query) {
-    clearBtn.classList.remove('hidden');
-  } else {
-    clearBtn.classList.add('hidden');
-  }
-
-  // Empty state or cards
-  if (data.length === 0) {
-    container.innerHTML = '';
-    emptyState.classList.remove('hidden');
-    if (query) {
-      emptyState.querySelector('p').textContent = '没有匹配的记录';
-      emptyState.querySelector('.empty-hint').textContent = '试试其他关键词';
-    } else {
-      emptyState.querySelector('p').textContent = '还没有快递记录';
-      emptyState.querySelector('.empty-hint').textContent = '点 + 按钮添加第一条';
+function batchMarkReceived(ids) {
+  var count = 0;
+  ids.forEach(function(id) {
+    var record = appData.find(function(r) { return r.id === id; });
+    if (record && !record.received) {
+      record.received = true;
+      record.receivedAt = Date.now();
+      count++;
     }
-    return;
-  }
-
-  emptyState.classList.add('hidden');
-  container.innerHTML = data.map(function(record) {
-    var statusClass = record.received ? 'received' : 'pending';
-    var statusText = record.received ? '已收到' : '待收件';
-    var notesHtml = record.notes ? '<div class="card-meta"><span>📝 ' + hl(record.notes, query) + '</span></div>' : '';
-    return '<div class="record-card ' + statusClass + '" data-id="' + record.id + '" onclick="showDetail(\'' + record.id + '\')">' +
-      '<div class="card-number">' + hl(record.number, query) + '</div>' +
-      '<div class="card-meta">' +
-        '<span>👤 ' + hl(record.customer, query) + '</span>' +
-        '<span>📍 ' + hl(record.region, query) + '</span>' +
-      '</div>' +
-      notesHtml +
-      '<span class="card-status ' + statusClass + '">' + statusText + '</span>' +
-      '<div class="card-date">' + record.date + '</div>' +
-    '</div>';
-  }).join('');
+  });
+  if (count > 0) saveData();
+  exitBatchMode();
+  render();
+  return count;
 }
 
-function hl(text, query) {
-  if (!text) return '';
-  if (!query) return escapeHtml(text);
+function getFilteredData(query) {
+  var records = appData.filter(function(r) {
+    return currentTab === 'pending' ? !r.received : r.received;
+  });
+  if (!query) return records;
   var q = query.trim().toLowerCase();
-  var idx = text.toLowerCase().indexOf(q);
-  if (idx === -1) return escapeHtml(text);
-  var before = escapeHtml(text.slice(0, idx));
-  var match = escapeHtml(text.slice(idx, idx + q.length));
-  var after = escapeHtml(text.slice(idx + q.length));
-  return before + '<span class="highlight">' + match + '</span>' + after;
+  return records.filter(function(r) {
+    return r.number.toLowerCase().indexOf(q) !== -1 ||
+      (r.customer && r.customer.toLowerCase().indexOf(q) !== -1) ||
+      (r.region && r.region.toLowerCase().indexOf(q) !== -1) ||
+      (r.notes && r.notes.toLowerCase().indexOf(q) !== -1);
+  });
 }
 
-function escapeHtml(text) {
-  var div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
+// === Auto-remember last input ===
+
+function saveLastInput(customer, region) {
+  localStorage.setItem(INPUT_KEY, JSON.stringify({ customer: customer, region: region }));
+}
+
+function loadLastInput() {
+  try {
+    var raw = localStorage.getItem(INPUT_KEY);
+    return raw ? JSON.parse(raw) : { customer: '', region: '' };
+  } catch (e) {
+    return { customer: '', region: '' };
+  }
+}
+
+function getRecentInputs() {
+  var seen = {};
+  var result = [];
+  for (var i = 0; i < appData.length; i++) {
+    var r = appData[i];
+    var key = (r.customer || '') + '||' + (r.region || '');
+    if (key !== '||' && !seen[key]) {
+      seen[key] = true;
+      result.push({ customer: r.customer || '', region: r.region || '' });
+      if (result.length >= 3) break;
+    }
+  }
+  return result;
+}
+
+// === Import / Export ===
+
+function exportCSV() {
+  var rows = [['快递单号', '客户名称', '地区', '录入日期', '状态', '备注']];
+  appData.forEach(function(r) {
+    rows.push([r.number, r.customer, r.region, r.date, r.received ? '已收到' : '待收件', r.notes]);
+  });
+  var csv = rows.map(function(row) {
+    return row.map(function(cell) { return '"' + cell.replace(/"/g, '""') + '"'; }).join(',');
+  }).join('\n');
+  var BOM = '﻿';
+  var blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = '快递记录_' + new Date().toISOString().slice(0, 10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importCSV(callback) {
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.csv,text/csv';
+  input.onchange = function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var text = ev.target.result;
+      var lines = text.split(/\r?\n/).filter(function(l) { return l.trim(); });
+      var imported = 0;
+      var skipped = 0;
+      for (var i = 1; i < lines.length; i++) {
+        var parts = parseCSVLine(lines[i]);
+        if (parts.length >= 3 && parts[0]) {
+          var exists = appData.some(function(r) { return r.number === parts[0]; });
+          if (!exists) {
+            addRecord(parts[0], parts[1] || '', parts[2] || '', parts[3] || '');
+            imported++;
+          } else {
+            skipped++;
+          }
+        }
+      }
+      if (callback) callback(imported, skipped);
+      render();
+    };
+    reader.readAsText(file, 'UTF-8');
+  };
+  input.click();
+}
+
+function parseCSVLine(line) {
+  var result = [];
+  var current = '';
+  var inQuotes = false;
+  for (var i = 0; i < line.length; i++) {
+    var ch = line[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (i + 1 < line.length && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        current += ch;
+      }
+    } else {
+      if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ',') {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
+// === Batch mode ===
+
+function enterBatchMode() {
+  batchMode = true;
+  batchSelected = {};
+  var bar = document.getElementById('batch-bar');
+  bar.classList.remove('hidden');
+  document.getElementById('btn-scan').classList.add('hidden');
+  document.getElementById('fab-actions').classList.add('hidden');
+  render();
+}
+
+function exitBatchMode() {
+  batchMode = false;
+  batchSelected = {};
+  document.getElementById('batch-bar').classList.add('hidden');
+  document.getElementById('btn-scan').classList.remove('hidden');
+  document.getElementById('fab-actions').classList.remove('hidden');
+  render();
+}
+
+function toggleBatchSelect(id) {
+  if (batchSelected[id]) {
+    delete batchSelected[id];
+  } else {
+    batchSelected[id] = true;
+  }
+  updateBatchCount();
+  render();
+}
+
+function updateBatchCount() {
+  var count = Object.keys(batchSelected).length;
+  document.getElementById('batch-count').textContent = '已选 ' + count + ' 项';
+}
+
+// === Toast ===
+
+function showToast(message, actionLabel, actionFn) {
+  var toast = document.getElementById('toast');
+  document.getElementById('toast-message').textContent = message;
+  var btn = document.getElementById('toast-action');
+  btn.textContent = actionLabel;
+  btn.onclick = actionFn;
+  toast.classList.remove('hidden');
+}
+
+function hideToast() {
+  document.getElementById('toast').classList.add('hidden');
+  pendingDeleteId = null;
+  if (pendingDeleteTimer) {
+    clearTimeout(pendingDeleteTimer);
+    pendingDeleteTimer = null;
+  }
+}
+
+// === Validation ===
+
+function validateAddForm(number, customer, region) {
+  if (!number) {
+    alert('请填写快递单号');
+    return false;
+  }
+  if (!customer && !region) {
+    alert('客户名称和地区至少填写一个');
+    return false;
+  }
+  return true;
 }
 
 // === Init ===
 loadData();
-render();
-
-// === Screen Navigation ===
-
-function showScreen(screenId) {
-  var screens = document.querySelectorAll('.screen');
-  for (var i = 0; i < screens.length; i++) {
-    screens[i].classList.remove('active');
-  }
-  document.getElementById(screenId).classList.add('active');
-}
-
-// === Form Handlers ===
-
-document.addEventListener('DOMContentLoaded', function() {
-
-  // FAB → show add screen
-  document.getElementById('btn-add').addEventListener('click', function() {
-    document.getElementById('add-form').reset();
-    showScreen('screen-add');
-    setTimeout(function() {
-      document.getElementById('input-number').focus();
-    }, 300);
-  });
-
-  // Back from add screen
-  document.getElementById('btn-back-from-add').addEventListener('click', function() {
-    showScreen('screen-list');
-    render();
-  });
-
-  // Save
-  document.getElementById('add-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    var number = document.getElementById('input-number').value.trim();
-    var customer = document.getElementById('input-customer').value.trim();
-    var region = document.getElementById('input-region').value.trim();
-    var notes = document.getElementById('input-notes').value.trim();
-
-    if (!number || !customer || !region) {
-      alert('请填写快递单号、客户名称和地区');
-      return;
-    }
-
-    addRecord(number, customer, region, notes);
-    this.reset();
-    showScreen('screen-list');
-    render();
-  });
-
-  // Save and continue adding
-  document.getElementById('btn-save-continue').addEventListener('click', function() {
-    var number = document.getElementById('input-number').value.trim();
-    var customer = document.getElementById('input-customer').value.trim();
-    var region = document.getElementById('input-region').value.trim();
-    var notes = document.getElementById('input-notes').value.trim();
-
-    if (!number || !customer || !region) {
-      alert('请填写快递单号、客户名称和地区');
-      return;
-    }
-
-    addRecord(number, customer, region, notes);
-    document.getElementById('add-form').reset();
-    setTimeout(function() {
-      document.getElementById('input-number').focus();
-    }, 200);
-  });
-
-  // Search with real-time filtering
-  document.getElementById('search-input').addEventListener('input', function() {
-    render();
-  });
-
-  // Clear search button
-  document.getElementById('btn-clear-search').addEventListener('click', function() {
-    document.getElementById('search-input').value = '';
-    document.getElementById('search-input').focus();
-    render();
-  });
-
-});
-
-// === Detail Screen ===
-
-var currentDetailId = null;
-
-function showDetail(id) {
-  currentDetailId = id;
-  var record = appData.find(function(r) { return r.id === id; });
-  if (!record) return;
-
-  document.getElementById('detail-number').textContent = record.number;
-  document.getElementById('detail-customer').textContent = record.customer;
-  document.getElementById('detail-region').textContent = record.region;
-  document.getElementById('detail-date').textContent = record.date;
-  document.getElementById('detail-notes').textContent = record.notes || '无';
-
-  var statusEl = document.getElementById('detail-status');
-  var toggleBtn = document.getElementById('btn-toggle-receive');
-
-  if (record.received) {
-    statusEl.textContent = '已收到';
-    statusEl.style.color = '#389e0d';
-    toggleBtn.textContent = '标记为未收到';
-    toggleBtn.className = 'btn-secondary btn-large';
-  } else {
-    statusEl.textContent = '待收件';
-    statusEl.style.color = '#d46b08';
-    toggleBtn.textContent = '标记为已收到';
-    toggleBtn.className = 'btn-primary btn-large';
-  }
-
-  showScreen('screen-detail');
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-
-  // Back from detail
-  document.getElementById('btn-back-from-detail').addEventListener('click', function() {
-    showScreen('screen-list');
-    render();
-  });
-
-  // Toggle received status
-  document.getElementById('btn-toggle-receive').addEventListener('click', function() {
-    if (currentDetailId) {
-      toggleReceived(currentDetailId);
-      showDetail(currentDetailId);
-      render();
-    }
-  });
-
-  // Delete with confirmation
-  document.getElementById('btn-delete').addEventListener('click', function() {
-    if (!currentDetailId) return;
-    if (confirm('确定要删除这条记录吗？')) {
-      deleteRecord(currentDetailId);
-      currentDetailId = null;
-      showScreen('screen-list');
-      render();
-    }
-  });
-
-});
-
-
-// === Barcode Scanning (Android Chrome BarcodeDetector API) ===
-
-var barcodeDetector = null;
-var scanStream = null;
-
-function isScanSupported() {
-  if (!('BarcodeDetector' in window)) return false;
-  return true;
-}
-
-function initScanSupport() {
-  var scanBtn = document.getElementById('btn-scan');
-  if (!isScanSupported()) {
-    scanBtn.classList.add('hidden');
-    return;
-  }
-  if ('BarcodeDetector' in window && BarcodeDetector.getSupportedFormats) {
-    BarcodeDetector.getSupportedFormats().then(function(formats) {
-      var supported = formats.some(function(f) {
-        return ['code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf'].indexOf(f) !== -1;
-      });
-      if (!supported) scanBtn.classList.add('hidden');
-    }).catch(function() {
-      // Keep button visible, let it fail gracefully at scan time
-    });
-  }
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-  initScanSupport();
-  document.getElementById('btn-scan').addEventListener('click', startScanner);
-  document.getElementById('btn-close-camera').addEventListener('click', stopScanner);
-});
-
-function startScanner() {
-  var overlay = document.getElementById('camera-overlay');
-  var video = document.getElementById('camera-view');
-  var status = document.getElementById('camera-status');
-  var resultDiv = document.getElementById('scan-result');
-  overlay.classList.remove('hidden');
-  resultDiv.innerHTML = '正在启动相机...';
-
-  try {
-    barcodeDetector = new BarcodeDetector({
-      formats: ['code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf']
-    });
-  } catch (e) {
-    resultDiv.innerHTML = '<span style="color:#ff4d4f">此设备不支持扫码功能，请使用搜索</span>';
-    setTimeout(stopScanner, 2000);
-    return;
-  }
-
-  navigator.mediaDevices.getUserMedia({
-    video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }
-  }).then(function(stream) {
-    scanStream = stream;
-    video.srcObject = stream;
-    return video.play();
-  }).then(function() {
-    status.textContent = '对准面单条形码';
-    resultDiv.innerHTML = '正在识别...';
-    scanLoop(video, resultDiv, status);
-  }).catch(function(e) {
-    resultDiv.innerHTML = '<span style="color:#ff4d4f">无法打开相机</span>';
-    setTimeout(stopScanner, 1500);
-  });
-}
-
-function stopScanner() {
-  var overlay = document.getElementById('camera-overlay');
-  overlay.classList.add('hidden');
-  scanLoopActive = false;
-  if (scanStream) {
-    scanStream.getTracks().forEach(function(t) { t.stop(); });
-    scanStream = null;
-  }
-  barcodeDetector = null;
-}
-
-var scanLoopActive = false;
-
-function scanLoop(video, resultDiv, statusEl) {
-  if (scanLoopActive) return;
-  scanLoopActive = true;
-
-  var scanStart = Date.now();
-  var lastNumber = '';
-
-  function tick() {
-    if (!scanLoopActive) return;
-
-    barcodeDetector.detect(video).then(function(barcodes) {
-      if (barcodes.length > 0) {
-        var number = barcodes[0].rawValue.trim();
-        if (number !== lastNumber) {
-          lastNumber = number;
-          scanCount++;
-          var matches = getFilteredData(number);
-          if (matches.length > 0) {
-            var record = matches[0];
-            resultDiv.innerHTML =
-              '<div class="scanned-number">' + escapeHtml(number) + '</div>' +
-              '<div class="scan-match">已匹配：' + escapeHtml(record.customer) +
-              '（' + escapeHtml(record.region) + '）' +
-              (record.received ? ' · 已收到' : ' · 待收件') + '</div>' +
-              '<button class="scan-retry-btn" onclick="showMatchedRecord()">查看详情</button>';
-            window._lastScannedId = record.id;
-            statusEl.textContent = '匹配成功！';
-            scanLoopActive = false;
-            return;
-          } else {
-            resultDiv.innerHTML =
-              '<div class="scanned-number">' + escapeHtml(number) + '</div>' +
-              '<div class="scan-no-match">未找到匹配记录</div>' +
-              '<div style="font-size:13px;color:#999;margin-top:6px">该单号不在列表中，继续扫描...</div>';
-            statusEl.textContent = '未匹配，继续扫描';
-          }
-        }
-      }
-    }).catch(function(e) {
-      // Detection frame error, retry next tick
-    });
-
-    // Safety limit: stop after ~30 seconds
-    if (Date.now() - scanStart > 30000) {
-      resultDiv.innerHTML = '<div style="color:#999">扫码超时，请点击关闭后重试</div>';
-      scanLoopActive = false;
-      return;
-    }
-
-    setTimeout(tick, 300);
-  }
-
-  tick();
-}
-
-function showMatchedRecord() {
-  if (window._lastScannedId) {
-    stopScanner();
-    showDetail(window._lastScannedId);
-  }
-}
-
-// === Service Worker Registration ===
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('sw.js').catch(function(err) {
-      console.log('SW registration failed:', err);
-    });
-  });
-}
-
 </script>
 </body>
 </html>
