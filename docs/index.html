@@ -884,6 +884,181 @@ function renderRecentPicks() {
   }).join('');
 }
 
+// === Tab switching ===
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('tab-pending').classList.toggle('active', tab === 'pending');
+  document.getElementById('tab-received').classList.toggle('active', tab === 'received');
+  document.getElementById('search-input').value = '';
+  if (batchMode) exitBatchMode();
+  render();
+}
+
+// === Batch mark selected ===
+function batchMarkSelected() {
+  var ids = Object.keys(batchSelected);
+  if (ids.length === 0) return;
+  batchMarkReceived(ids);
+}
+
+// === Detail Screen ===
+var currentDetailId = null;
+
+function showDetail(id) {
+  currentDetailId = id;
+  var record = appData.find(function(r) { return r.id === id; });
+  if (!record) return;
+
+  document.getElementById('detail-number').textContent = record.number;
+  document.getElementById('detail-customer').textContent = record.customer || '未填写';
+  document.getElementById('detail-region').textContent = record.region || '未填写';
+  document.getElementById('detail-date').textContent = record.date;
+  document.getElementById('detail-notes').textContent = record.notes || '无';
+
+  var statusEl = document.getElementById('detail-status');
+  var toggleBtn = document.getElementById('btn-toggle-receive');
+
+  if (record.received) {
+    statusEl.textContent = '已收到';
+    statusEl.style.color = '#389e0d';
+    toggleBtn.textContent = '标记为未收到';
+    toggleBtn.className = 'btn-secondary btn-large';
+  } else {
+    statusEl.textContent = '待收件';
+    statusEl.style.color = '#d46b08';
+    toggleBtn.textContent = '标记为已收到';
+    toggleBtn.className = 'btn-primary btn-large';
+  }
+
+  showScreen('screen-detail');
+}
+
+// === FAB Menu ===
+function toggleFabMenu() {
+  var menu = document.getElementById('fab-menu');
+  menu.classList.toggle('hidden');
+}
+
+// Close FAB menu when tapping outside
+document.addEventListener('click', function(e) {
+  var menu = document.getElementById('fab-menu');
+  if (!menu.classList.contains('hidden') && !e.target.closest('#fab-group')) {
+    menu.classList.add('hidden');
+  }
+});
+
+// === Event Listeners ===
+
+document.addEventListener('DOMContentLoaded', function() {
+
+  // FAB: show add screen
+  document.getElementById('btn-add').addEventListener('click', function() {
+    document.getElementById('add-form').reset();
+    showAddScreen();
+  });
+
+  // Back from add screen
+  document.getElementById('btn-back-from-add').addEventListener('click', function() {
+    showScreen('screen-list');
+    render();
+  });
+
+  // Save
+  document.getElementById('add-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var number = document.getElementById('input-number').value.trim();
+    var customer = document.getElementById('input-customer').value.trim();
+    var region = document.getElementById('input-region').value.trim();
+    var notes = document.getElementById('input-notes').value.trim();
+
+    if (!validateAddForm(number, customer, region)) return;
+
+    addRecord(number, customer, region, notes);
+    this.reset();
+    showScreen('screen-list');
+    render();
+  });
+
+  // Save and continue
+  document.getElementById('btn-save-continue').addEventListener('click', function() {
+    var number = document.getElementById('input-number').value.trim();
+    var customer = document.getElementById('input-customer').value.trim();
+    var region = document.getElementById('input-region').value.trim();
+    var notes = document.getElementById('input-notes').value.trim();
+
+    if (!validateAddForm(number, customer, region)) return;
+
+    addRecord(number, customer, region, notes);
+    document.getElementById('add-form').reset();
+    var last = loadLastInput();
+    document.getElementById('input-customer').value = last.customer || '';
+    document.getElementById('input-region').value = last.region || '';
+    renderRecentPicks();
+    setTimeout(function() {
+      document.getElementById('input-number').focus();
+    }, 200);
+  });
+
+  // Search
+  document.getElementById('search-input').addEventListener('input', function() {
+    render();
+  });
+
+  // Clear search
+  document.getElementById('btn-clear-search').addEventListener('click', function() {
+    document.getElementById('search-input').value = '';
+    document.getElementById('search-input').focus();
+    render();
+  });
+
+  // Detail: back
+  document.getElementById('btn-back-from-detail').addEventListener('click', function() {
+    showScreen('screen-list');
+    render();
+  });
+
+  // Detail: toggle received
+  document.getElementById('btn-toggle-receive').addEventListener('click', function() {
+    if (currentDetailId) {
+      toggleReceived(currentDetailId);
+      showDetail(currentDetailId);
+      render();
+    }
+  });
+
+  // Detail: delete with soft delete
+  document.getElementById('btn-delete').addEventListener('click', function() {
+    if (!currentDetailId) return;
+    if (confirm('确定要删除这条记录吗？')) {
+      var id = currentDetailId;
+      currentDetailId = null;
+      showScreen('screen-list');
+      render();
+      softDelete(id);
+    }
+  });
+
+  // Long press for batch mode
+  var pressTimer;
+  document.getElementById('card-list').addEventListener('touchstart', function(e) {
+    if (batchMode || currentTab !== 'pending') return;
+    var card = e.target.closest('.record-card');
+    if (!card) return;
+    pressTimer = setTimeout(function() {
+      enterBatchMode();
+    }, 600);
+  }, { passive: true });
+
+  document.getElementById('card-list').addEventListener('touchend', function() {
+    clearTimeout(pressTimer);
+  });
+
+  document.getElementById('card-list').addEventListener('touchmove', function() {
+    clearTimeout(pressTimer);
+  });
+
+});
+
 </script>
 </body>
 </html>
