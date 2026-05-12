@@ -1151,11 +1151,11 @@ function scanLoop(video, resultDiv, statusEl) {
           var matches = getFilteredData(number);
           if (matches.length > 0) {
             var record = matches[0];
+            if (!record.received) toggleReceived(record.id);
             resultDiv.innerHTML =
               '<div class="scanned-number">' + escapeHtml(number) + '</div>' +
               '<div class="scan-match">已匹配：' + escapeHtml(record.customer || '未知') +
-              '（' + escapeHtml(record.region || '未知') + '）' +
-              (record.received ? ' · 已收到' : ' · 待收件') + '</div>' +
+              '（' + escapeHtml(record.region || '未知') + '） · 已收到</div>' +
               '<button class="scan-retry-btn" onclick="showMatchedRecord()">查看详情</button>';
             window._lastScannedId = record.id;
             statusEl.textContent = '匹配成功！';
