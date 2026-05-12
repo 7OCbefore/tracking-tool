@@ -729,10 +729,11 @@ function render() {
 }
 
 function hl(text, query) {
-  if (!query || !text) return text || '';
+  if (!text) return '';
+  if (!query) return escapeHtml(text);
   var q = query.trim().toLowerCase();
   var idx = text.toLowerCase().indexOf(q);
-  if (idx === -1) return text;
+  if (idx === -1) return escapeHtml(text);
   var before = escapeHtml(text.slice(0, idx));
   var match = escapeHtml(text.slice(idx, idx + q.length));
   var after = escapeHtml(text.slice(idx + q.length));
