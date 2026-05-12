@@ -734,6 +734,156 @@ function validateAddForm(number, customer, region) {
 
 // === Init ===
 loadData();
+
+// === Render ===
+
+function render() {
+  var query = document.getElementById('search-input').value;
+  var data = getFilteredData(query);
+  var container = document.getElementById('card-list');
+  var emptyState = document.getElementById('empty-state');
+  var statsEl = document.getElementById('stats');
+  var clearBtn = document.getElementById('btn-clear-search');
+
+  // Stats
+  var total = appData.length;
+  var received = appData.filter(function(r) { return r.received; }).length;
+  var pending = total - received;
+  statsEl.textContent = '共' + total + '条 · 已收' + received + ' · 待收' + pending;
+
+  // Clear button
+  if (query) { clearBtn.classList.remove('hidden'); }
+  else { clearBtn.classList.add('hidden'); }
+
+  // Tab class on container for CSS selectors
+  if (currentTab === 'pending') {
+    container.className = 'tab-pending';
+  } else {
+    container.className = 'tab-received';
+  }
+
+  // Batch mode class
+  if (batchMode) { container.classList.add('batch-mode'); }
+
+  // Empty state
+  if (data.length === 0) {
+    container.innerHTML = '';
+    emptyState.classList.remove('hidden');
+    var emptyP = emptyState.querySelector('p');
+    var emptyHint = emptyState.querySelector('.empty-hint');
+    var emptyBtn = document.getElementById('btn-add-from-empty');
+
+    if (query) {
+      emptyP.textContent = '没有匹配的记录';
+      emptyHint.textContent = '搜索关键词：' + query;
+      emptyBtn.textContent = '添加此单号？';
+      emptyBtn.classList.remove('hidden');
+      emptyBtn.onclick = function() {
+        document.getElementById('input-number').value = query;
+        showAddScreen();
+      };
+    } else {
+      if (currentTab === 'pending') {
+        emptyP.textContent = '暂无待收件快递';
+        emptyHint.textContent = '点 + 按钮添加第一条';
+      } else {
+        emptyP.textContent = '暂无已收件快递';
+        emptyHint.textContent = '收到快递后标记已收即可出现在这里';
+      }
+      emptyBtn.classList.add('hidden');
+    }
+    return;
+  }
+
+  emptyState.classList.add('hidden');
+
+  container.innerHTML = data.map(function(record) {
+    var statusClass = record.received ? 'received' : 'pending';
+    var statusText = record.received ? '收' : '待';
+    var statusLabelClass = record.received ? 'received-l' : 'pending-l';
+    var isChecked = batchSelected[record.id] ? ' checked' : '';
+    var batchSelClass = batchSelected[record.id] ? ' batch-selected' : '';
+
+    var checkBtnHtml = '';
+    if (currentTab === 'pending' && !batchMode) {
+      checkBtnHtml = '<button class="card-check-btn" onclick="event.stopPropagation(); toggleReceived(\'' + record.id + '\'); render();"></button>';
+    }
+
+    var notesHtml = record.notes
+      ? '<div class="card-meta"><span>📝 ' + hl(record.notes, query) + '</span></div>'
+      : '';
+
+    return '<div class="record-card ' + statusClass + batchSelClass + '" data-id="' + record.id + '" onclick="' + (batchMode ? 'toggleBatchSelect(\'' + record.id + '\')' : 'showDetail(\'' + record.id + '\')') + '">' +
+      (batchMode ? '<div class="card-checkbox' + isChecked + '"></div>' : '') +
+      checkBtnHtml +
+      '<div class="card-number">' + hl(record.number, query) +
+        '<span class="card-status-label ' + statusLabelClass + '">' + statusText + '</span>' +
+      '</div>' +
+      '<div class="card-meta">' +
+        (record.customer ? '<span>👤 ' + hl(record.customer, query) + '</span>' : '<span>👤 未填写</span>') +
+        (record.region ? '<span>📍 ' + hl(record.region, query) + '</span>' : '<span>📍 未填写</span>') +
+      '</div>' +
+      notesHtml +
+      '<span class="card-status ' + statusClass + '" style="display:none"></span>' +
+      '<div class="card-date">' + record.date + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function hl(text, query) {
+  if (!text) return '';
+  if (!query) return escapeHtml(text);
+  var q = query.trim().toLowerCase();
+  var idx = text.toLowerCase().indexOf(q);
+  if (idx === -1) return escapeHtml(text);
+  var before = escapeHtml(text.slice(0, idx));
+  var match = escapeHtml(text.slice(idx, idx + q.length));
+  var after = escapeHtml(text.slice(idx + q.length));
+  return before + '<span class="highlight">' + match + '</span>' + after;
+}
+
+function escapeHtml(text) {
+  var div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// === Screen Navigation ===
+
+function showScreen(screenId) {
+  var screens = document.querySelectorAll('.screen');
+  for (var i = 0; i < screens.length; i++) {
+    screens[i].classList.remove('active');
+  }
+  document.getElementById(screenId).classList.add('active');
+}
+
+function showAddScreen() {
+  var last = loadLastInput();
+  document.getElementById('input-customer').value = last.customer || '';
+  document.getElementById('input-region').value = last.region || '';
+  renderRecentPicks();
+  showScreen('screen-add');
+  setTimeout(function() {
+    document.getElementById('input-number').focus();
+  }, 300);
+}
+
+function renderRecentPicks() {
+  var recent = getRecentInputs();
+  var group = document.getElementById('recent-picks-group');
+  var container = document.getElementById('recent-picks');
+  if (recent.length === 0) {
+    group.style.display = 'none';
+    return;
+  }
+  group.style.display = 'block';
+  container.innerHTML = recent.map(function(item, i) {
+    var label = (item.customer || '未知') + ' / ' + (item.region || '未知');
+    return '<span class="recent-pick-chip" onclick="var r=getRecentInputs()[' + i + '];document.getElementById(\'input-customer\').value=r.customer;document.getElementById(\'input-region\').value=r.region;">' + escapeHtml(label) + '</span>';
+  }).join('');
+}
+
 </script>
 </body>
 </html>
