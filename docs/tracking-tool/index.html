@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>快递单号管理</title>
+<link rel="manifest" href="manifest.json">
+<style>
+/* CSS in Task 2 */
+</style>
+</head>
+<body>
+
+<!-- ====== Screen 1: Main List ====== -->
+<div id="screen-list" class="screen active">
+  <header>
+    <h1>快递单号</h1>
+    <div id="stats"></div>
+  </header>
+
+  <div id="search-bar">
+    <input type="search" id="search-input" placeholder="搜索单号、客户、地区..." autocomplete="off">
+    <button id="btn-clear-search" class="hidden">x</button>
+  </div>
+
+  <div id="card-list">
+    <!-- Cards rendered by JS -->
+  </div>
+
+  <div id="empty-state" class="hidden">
+    <div class="empty-icon">📦</div>
+    <p>还没有快递记录</p>
+    <p class="empty-hint">点下方按钮添加第一条</p>
+  </div>
+
+  <button id="btn-add" class="fab">+</button>
+  <button id="btn-scan" class="fab-scan">📷</button>
+</div>
+
+<!-- ====== Camera overlay (scan barcode) ====== -->
+<div id="camera-overlay" class="hidden">
+  <div id="camera-header">
+    <button id="btn-close-camera" class="header-btn">← 关闭</button>
+    <span id="camera-status">对准条形码</span>
+  </div>
+  <video id="camera-view" autoplay playsinline></video>
+  <div id="scan-result"></div>
+</div>
+
+<!-- ====== Screen 2: Add Record ====== -->
+<div id="screen-add" class="screen">
+  <header>
+    <button id="btn-back-from-add" class="header-btn">← 返回</button>
+    <h1>添加快递</h1>
+    <div></div>
+  </header>
+
+  <form id="add-form">
+    <div class="form-group">
+      <label for="input-number">快递单号</label>
+      <input type="text" id="input-number" required placeholder="输入或粘贴快递单号" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label for="input-customer">客户名称</label>
+      <input type="text" id="input-customer" required placeholder="输入客户名称" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label for="input-region">地区</label>
+      <input type="text" id="input-region" required placeholder="如：上海、北京、广东" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label for="input-notes">备注（可选）</label>
+      <input type="text" id="input-notes" placeholder="如：订单号、商品名称" autocomplete="off">
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" id="btn-save" class="btn-primary">保存</button>
+      <button type="button" id="btn-save-continue" class="btn-secondary">保存并继续添加</button>
+    </div>
+  </form>
+</div>
+
+<!-- ====== Screen 3: Record Detail ====== -->
+<div id="screen-detail" class="screen">
+  <header>
+    <button id="btn-back-from-detail" class="header-btn">← 返回</button>
+    <h1>记录详情</h1>
+    <div></div>
+  </header>
+
+  <div id="detail-content">
+    <div class="detail-field">
+      <label>快递单号</label>
+      <div id="detail-number" class="detail-value large"></div>
+    </div>
+    <div class="detail-field">
+      <label>客户名称</label>
+      <div id="detail-customer" class="detail-value"></div>
+    </div>
+    <div class="detail-field">
+      <label>地区</label>
+      <div id="detail-region" class="detail-value"></div>
+    </div>
+    <div class="detail-field">
+      <label>录入日期</label>
+      <div id="detail-date" class="detail-value"></div>
+    </div>
+    <div class="detail-field">
+      <label>备注</label>
+      <div id="detail-notes" class="detail-value"></div>
+    </div>
+    <div class="detail-field">
+      <label>状态</label>
+      <div id="detail-status" class="detail-value"></div>
+    </div>
+
+    <div class="detail-actions">
+      <button id="btn-toggle-receive" class="btn-primary btn-large">标记为已收到</button>
+      <button id="btn-delete" class="btn-danger btn-large">删除此记录</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// JS in Task 3+
+</script>
+</body>
+</html>
