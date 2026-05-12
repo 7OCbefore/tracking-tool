@@ -319,6 +319,16 @@ header h1 { font-size: 18px; font-weight: 600; color: #1a1a1a; }
 /* === Utility === */
 .hidden { display: none !important; }
 
+.import-banner {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 16px; background: #fffbe6; border-bottom: 1px solid #ffe58f;
+  font-size: 14px; color: #ad8b00;
+}
+.import-banner button {
+  padding: 6px 14px; border: 1px solid #ffe58f; border-radius: 6px;
+  background: #fff; color: #ad8b00; font-size: 13px; cursor: pointer; white-space: nowrap;
+}
+
 /* === Responsive === */
 @media (max-width: 400px) {
   .card-number { font-size: 16px; }
@@ -370,6 +380,7 @@ header h1 { font-size: 18px; font-weight: 600; color: #1a1a1a; }
     <div id="fab-menu" class="hidden">
       <button onclick="exportCSV(); toggleFabMenu();">导出 CSV</button>
       <button onclick="toggleFabMenu(); importCSV(function(imp, skip) { alert('导入完成：成功 ' + imp + ' 条，跳过 ' + skip + ' 条'); });">导入 CSV</button>
+      <button onclick="toggleFabMenu(); importTempCSV();">临时查看</button>
       <button onclick="toggleFabMenu(); archiveData();">归档</button>
     </div>
   </div>
@@ -842,6 +853,64 @@ function archiveData() {
   });
 }
 
+// === Temporary CSV View ===
+
+var importedViewData = null;
+var isViewingImported = false;
+
+function importTempCSV() {
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.csv,text/csv';
+  input.onchange = function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var text = ev.target.result;
+      var lines = text.split(/\r?\n/).filter(function(l) { return l.trim(); });
+      var records = [];
+      var errors = 0;
+      for (var i = 1; i < lines.length; i++) {
+        var parts = parseCSVLine(lines[i]);
+        if (parts.length >= 3 && parts[0]) {
+          records.push({
+            number: parts[0],
+            customer: parts[1] || '',
+            region: parts[2] || '',
+            notes: parts[3] || '',
+            date: parts[4] || '',
+            received: (parts[5] || '').indexOf('已收') !== -1
+          });
+        } else {
+          errors++;
+        }
+      }
+      if (records.length === 0) {
+        alert('无法解析 CSV 文件，请确认格式正确');
+        return;
+      }
+      importedViewData = records;
+      isViewingImported = true;
+      currentTab = 'pending';
+      window.isViewingImported = true;
+      showScreen('screen-list');
+      render();
+      alert('已加载 ' + records.length + ' 条历史记录（只读模式）\n顶部黄色条为查看模式，点「返回当前数据」恢复');
+    };
+    reader.readAsText(file, 'UTF-8');
+  };
+  input.click();
+}
+
+function exitImportedView() {
+  isViewingImported = false;
+  importedViewData = null;
+  window.isViewingImported = false;
+  resetPagination();
+  render();
+}
+
 // === Auto-remember last input ===
 
 function saveLastInput(customer, region) {
@@ -1035,8 +1104,25 @@ openDB().then(function() { return loadData(); }).then(function() { render(); }).
 function render() {
   if (!_loadingMore) resetPagination();
   var query = document.getElementById('search-input').value;
-  var data = getFilteredData(query);
   var isViewingImported = window.isViewingImported || false;
+  var data;
+  if (isViewingImported && importedViewData) {
+    data = importedViewData;
+    if (query) {
+      var q = query.trim().toLowerCase();
+      data = importedViewData.filter(function(r) {
+        var num = (r.number || '').toLowerCase();
+        return num.indexOf(q) !== -1 || q.indexOf(num) !== -1 ||
+          (r.customer && r.customer.toLowerCase().indexOf(q) !== -1) ||
+          (r.region && r.region.toLowerCase().indexOf(q) !== -1);
+      });
+    }
+    data = data.filter(function(r) {
+      return currentTab === 'pending' ? !r.received : r.received;
+    });
+  } else {
+    data = getFilteredData(query);
+  }
   var container = document.getElementById('card-list');
   var emptyState = document.getElementById('empty-state');
   var statsEl = document.getElementById('stats');
@@ -1047,6 +1133,21 @@ function render() {
   var received = appData.filter(function(r) { return r.received; }).length;
   var pending = total - received;
   statsEl.textContent = '共' + total + '条 · 已收' + received + ' · 待收' + pending;
+
+  // Imported view banner
+  var existingBanner = document.getElementById('import-banner');
+  if (isViewingImported && importedViewData) {
+    if (!existingBanner) {
+      var banner = document.createElement('div');
+      banner.id = 'import-banner';
+      banner.className = 'import-banner';
+      banner.innerHTML = '<span>📄 查看历史数据 · 共 ' + importedViewData.length + ' 条</span><button onclick="exitImportedView()">返回当前数据</button>';
+      var listEl = document.getElementById('card-list');
+      listEl.parentNode.insertBefore(banner, listEl);
+    }
+  } else if (existingBanner) {
+    existingBanner.parentNode.removeChild(existingBanner);
+  }
 
   // Clear button
   if (query) { clearBtn.classList.remove('hidden'); }
