@@ -672,6 +672,82 @@ function getFilteredData(query) {
     (r.notes && r.notes.toLowerCase().includes(q))
   );
 }
+
+// === Render ===
+
+function render() {
+  var query = document.getElementById('search-input').value;
+  var data = getFilteredData(query);
+  var container = document.getElementById('card-list');
+  var emptyState = document.getElementById('empty-state');
+  var statsEl = document.getElementById('stats');
+  var clearBtn = document.getElementById('btn-clear-search');
+
+  // Stats
+  var total = appData.length;
+  var received = appData.filter(function(r) { return r.received; }).length;
+  var pending = total - received;
+  statsEl.textContent = '共' + total + '条 · 已收' + received + ' · 待收' + pending;
+
+  // Clear button visibility
+  if (query) {
+    clearBtn.classList.remove('hidden');
+  } else {
+    clearBtn.classList.add('hidden');
+  }
+
+  // Empty state or cards
+  if (data.length === 0) {
+    container.innerHTML = '';
+    emptyState.classList.remove('hidden');
+    if (query) {
+      emptyState.querySelector('p').textContent = '没有匹配的记录';
+      emptyState.querySelector('.empty-hint').textContent = '试试其他关键词';
+    } else {
+      emptyState.querySelector('p').textContent = '还没有快递记录';
+      emptyState.querySelector('.empty-hint').textContent = '点 + 按钮添加第一条';
+    }
+    return;
+  }
+
+  emptyState.classList.add('hidden');
+  container.innerHTML = data.map(function(record) {
+    var statusClass = record.received ? 'received' : 'pending';
+    var statusText = record.received ? '已收到' : '待收件';
+    var notesHtml = record.notes ? '<div class="card-meta"><span>📝 ' + hl(record.notes, query) + '</span></div>' : '';
+    return '<div class="record-card ' + statusClass + '" data-id="' + record.id + '" onclick="showDetail(\'' + record.id + '\')">' +
+      '<div class="card-number">' + hl(record.number, query) + '</div>' +
+      '<div class="card-meta">' +
+        '<span>👤 ' + hl(record.customer, query) + '</span>' +
+        '<span>📍 ' + hl(record.region, query) + '</span>' +
+      '</div>' +
+      notesHtml +
+      '<span class="card-status ' + statusClass + '">' + statusText + '</span>' +
+      '<div class="card-date">' + record.date + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function hl(text, query) {
+  if (!query || !text) return text || '';
+  var q = query.trim().toLowerCase();
+  var idx = text.toLowerCase().indexOf(q);
+  if (idx === -1) return text;
+  var before = escapeHtml(text.slice(0, idx));
+  var match = escapeHtml(text.slice(idx, idx + q.length));
+  var after = escapeHtml(text.slice(idx + q.length));
+  return before + '<span class="highlight">' + match + '</span>' + after;
+}
+
+function escapeHtml(text) {
+  var div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// === Init ===
+loadData();
+render();
 </script>
 </body>
 </html>
