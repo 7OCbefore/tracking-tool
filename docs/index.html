@@ -311,6 +311,11 @@ header h1 { font-size: 18px; font-weight: 600; color: #1a1a1a; }
 .scanned-number { animation: slideUp 0.25s ease; }
 @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
+/* === Pagination === */
+.load-more { text-align: center; padding: 16px; color: #1890ff; font-size: 14px; cursor: pointer; }
+.load-more:active { background: #f5f5f5; border-radius: 8px; }
+.load-more-done { color: #999; cursor: default; }
+
 /* === Utility === */
 .hidden { display: none !important; }
 
@@ -759,6 +764,26 @@ function getFilteredData(query) {
   });
 }
 
+// === Pagination ===
+
+var PAGE_SIZE = 50;
+var currentPage = 1;
+var hasMore = true;
+var _loadingMore = false;
+
+function resetPagination() {
+  currentPage = 1;
+  hasMore = true;
+}
+
+function loadMore() {
+  if (hasMore === false) return;
+  currentPage++;
+  _loadingMore = true;
+  render();
+  _loadingMore = false;
+}
+
 // === Auto-remember last input ===
 
 function saveLastInput(customer, region) {
@@ -950,8 +975,10 @@ openDB().then(function() { return loadData(); }).then(function() { render(); }).
 // === Render ===
 
 function render() {
+  if (!_loadingMore) resetPagination();
   var query = document.getElementById('search-input').value;
   var data = getFilteredData(query);
+  var isViewingImported = window.isViewingImported || false;
   var container = document.getElementById('card-list');
   var emptyState = document.getElementById('empty-state');
   var statsEl = document.getElementById('stats');
@@ -1009,26 +1036,40 @@ function render() {
 
   emptyState.classList.add('hidden');
 
-  container.innerHTML = data.map(function(record) {
+  // Pagination
+  if (!isViewingImported) {
+    var endIndex = currentPage * PAGE_SIZE;
+    if (endIndex >= data.length) { endIndex = data.length; hasMore = false; }
+    else { hasMore = true; }
+  } else {
+    var endIndex = data.length;
+    hasMore = false;
+  }
+
+  container.innerHTML = data.slice(0, endIndex).map(function(record) {
     var statusClass = record.received ? 'received' : 'pending';
     var statusText = record.received ? '收' : '待';
     var statusLabelClass = record.received ? 'received-l' : 'pending-l';
     var isChecked = batchSelected[record.id] ? ' checked' : '';
     var batchSelClass = batchSelected[record.id] ? ' batch-selected' : '';
+    var cardId = record.id || '';
 
     var checkBtnHtml = '';
-    if (currentTab === 'pending' && !batchMode) {
-      checkBtnHtml = '<button class="card-check-btn" onclick="event.stopPropagation(); toggleReceived(\'' + record.id + '\'); render();"></button>';
+    if (currentTab === 'pending' && !batchMode && !isViewingImported) {
+      checkBtnHtml = '<button class="card-check-btn" onclick="event.stopPropagation(); toggleReceived(\'' + cardId + '\'); render();"></button>';
     }
 
-    var notesHtml = record.notes
-      ? '<div class="card-meta"><span>📝 ' + hl(record.notes, query) + '</span></div>'
-      : '';
+    var notesHtml = record.notes ? '<div class="card-meta"><span>📝 ' + hl(record.notes, query) + '</span></div>' : '';
 
-    return '<div class="record-card ' + statusClass + batchSelClass + '" data-id="' + record.id + '" onclick="' + (batchMode ? 'toggleBatchSelect(\'' + record.id + '\')' : 'showDetail(\'' + record.id + '\')') + '">' +
+    var clickHandler = '';
+    if (batchMode) clickHandler = "toggleBatchSelect('" + cardId + "')";
+    else if (isViewingImported) clickHandler = '';
+    else clickHandler = "showDetail('" + cardId + "')";
+
+    return '<div class="record-card ' + statusClass + batchSelClass + '" data-id="' + cardId + '" onclick="' + clickHandler + '">' +
       (batchMode ? '<div class="card-checkbox' + isChecked + '"></div>' : '') +
       checkBtnHtml +
-      '<div class="card-number">' + hl(record.number, query) +
+      '<div class="card-number">' + hl(record.number || '', query) +
         '<span class="card-status-label ' + statusLabelClass + '">' + statusText + '</span>' +
       '</div>' +
       '<div class="card-meta">' +
@@ -1036,11 +1077,35 @@ function render() {
         (record.region ? '<span>📍 ' + hl(record.region, query) + '</span>' : '<span>📍 未填写</span>') +
       '</div>' +
       notesHtml +
-      '<span class="card-status ' + statusClass + '" style="display:none"></span>' +
-      '<div class="card-date">' + record.date + '</div>' +
+      '<div class="card-date">' + (record.date || '') + '</div>' +
     '</div>';
   }).join('');
+
+  // Load more button
+  if (hasMore && !isViewingImported) {
+    container.innerHTML += '<div id="load-more" class="load-more" onclick="loadMore()">显示更多 (已加载 ' + endIndex + '/' + data.length + ')</div>';
+  } else if (data.length > PAGE_SIZE && !isViewingImported) {
+    container.innerHTML += '<div class="load-more load-more-done">已加载全部 ' + data.length + ' 条</div>';
+  }
 }
+
+// === Infinite scroll ===
+
+(function() {
+  var scrollTimer = null;
+  var listEl = document.getElementById('card-list');
+  if (listEl) {
+    listEl.addEventListener('scroll', function() {
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(function() {
+        var el = document.getElementById('card-list');
+        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 250) {
+          loadMore();
+        }
+      }, 200);
+    });
+  }
+})();
 
 function hl(text, query) {
   if (!text) return '';
