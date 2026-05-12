@@ -478,35 +478,189 @@ if (window.caches) {
   });
 }
 
-// === Data Layer V2 ===
+// === Data Layer V2 — IndexedDB ===
 
 var STORAGE_KEY = 'tracking_data_v2';
 var INPUT_KEY = 'tracking_last_input';
+var META_KEY = 'tracking_meta';
 var appData = [];
-var currentTab = 'pending';   // 'pending' | 'received'
+var currentTab = 'pending';
 var batchMode = false;
 var batchSelected = {};
 var pendingDeleteId = null;
 var pendingDeleteTimer = null;
+var dbReady = false;
+var dbQueue = [];
+
+// === IndexedDB ===
+
+function openDB() {
+  return new Promise(function(resolve, reject) {
+    var req = indexedDB.open('tracking_tool', 1);
+    req.onupgradeneeded = function(e) {
+      var db = e.target.result;
+      if (!db.objectStoreNames.contains('records')) {
+        var store = db.createObjectStore('records', { keyPath: 'id' });
+        store.createIndex('createdAt', 'createdAt', { unique: false });
+        store.createIndex('received', 'received', { unique: false });
+      }
+    };
+    req.onsuccess = function(e) {
+      dbReady = true;
+      resolve(e.target.result);
+      while (dbQueue.length > 0) { dbQueue.shift()(); }
+    };
+    req.onerror = function(e) {
+      reject(e.target.error);
+    };
+  });
+}
+
+function withDB(callback) {
+  return new Promise(function(resolve, reject) {
+    if (!dbReady) {
+      dbQueue.push(function() { withDB(callback).then(resolve).catch(reject); });
+      return;
+    }
+    var req = indexedDB.open('tracking_tool', 1);
+    req.onsuccess = function(e) {
+      var db = e.target.result;
+      try {
+        var result = callback(db);
+        db.close();
+        resolve(result);
+      } catch (err) {
+        db.close();
+        reject(err);
+      }
+    };
+    req.onerror = function(e) { reject(e.target.error); };
+  });
+}
+
+function dbGetAllRecords() {
+  return withDB(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx = db.transaction('records', 'readonly');
+      var store = tx.objectStore('records');
+      var req = store.getAll();
+      req.onsuccess = function() { resolve(req.result); };
+      req.onerror = function() { reject(req.error); };
+    });
+  });
+}
+
+function dbAddRecord(record) {
+  return withDB(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx = db.transaction('records', 'readwrite');
+      var store = tx.objectStore('records');
+      var req = store.add(record);
+      req.onsuccess = function() { resolve(); };
+      req.onerror = function() { reject(req.error); };
+    });
+  });
+}
+
+function dbPutRecord(record) {
+  return withDB(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx = db.transaction('records', 'readwrite');
+      var store = tx.objectStore('records');
+      var req = store.put(record);
+      req.onsuccess = function() { resolve(); };
+      req.onerror = function() { reject(req.error); };
+    });
+  });
+}
+
+function dbAddMany(records) {
+  return withDB(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx = db.transaction('records', 'readwrite');
+      var store = tx.objectStore('records');
+      var completed = 0;
+      for (var i = 0; i < records.length; i++) {
+        (function(req) {
+          req.onsuccess = function() {
+            completed++;
+            if (completed >= records.length) resolve();
+          };
+          req.onerror = function() { reject(this.error); };
+        })(store.add(records[i]));
+      }
+      if (records.length === 0) resolve();
+    });
+  });
+}
+
+function dbDeleteRecord(id) {
+  return withDB(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx = db.transaction('records', 'readwrite');
+      var store = tx.objectStore('records');
+      var req = store.delete(id);
+      req.onsuccess = function() { resolve(); };
+      req.onerror = function() { reject(req.error); };
+    });
+  });
+}
+
+function dbClearAll() {
+  return withDB(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx = db.transaction('records', 'readwrite');
+      var store = tx.objectStore('records');
+      var req = store.clear();
+      req.onsuccess = function() { resolve(); };
+      req.onerror = function() { reject(req.error); };
+    });
+  });
+}
+
+function dbCount() {
+  return withDB(function(db) {
+    return new Promise(function(resolve, reject) {
+      var tx = db.transaction('records', 'readonly');
+      var store = tx.objectStore('records');
+      var req = store.count();
+      req.onsuccess = function() { resolve(req.result); };
+      req.onerror = function() { reject(req.error); };
+    });
+  });
+}
+
+// === Data CRUD ===
 
 function loadData() {
   try {
     var raw = localStorage.getItem(STORAGE_KEY);
-    appData = raw ? JSON.parse(raw) : [];
-    // Migrate V1 data
-    if (appData.length > 0 && appData[0] && appData[0].schemaVersion !== 2) {
-      appData.forEach(function(r) {
-        r.schemaVersion = 2;
-      });
-      saveData();
+    if (raw) {
+      appData = JSON.parse(raw);
+      if (appData.length > 0) {
+        dbAddMany(appData).then(function() {
+          localStorage.removeItem(STORAGE_KEY);
+        }).catch(function() {});
+      }
     }
   } catch (e) {
     appData = [];
   }
+  if (appData.length === 0) {
+    dbGetAllRecords().then(function(records) {
+      records.sort(function(a, b) { return b.createdAt - a.createdAt; });
+      appData = records;
+      render();
+    }).catch(function() {
+      appData = [];
+    });
+  }
 }
 
-function saveData() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+function saveRecord(record) {
+  dbPutRecord(record).catch(function(e) {
+    console.log('DB save error:', e);
+  });
 }
 
 function generateId() {
@@ -529,23 +683,21 @@ function addRecord(number, customer, region, notes) {
     schemaVersion: 2
   };
   appData.unshift(record);
-  saveData();
+  dbAddRecord(record).catch(function(e) { console.log('DB add error:', e); });
   saveLastInput(record.customer, record.region);
   return record;
 }
 
 function deleteRecord(id) {
   appData = appData.filter(function(r) { return r.id !== id; });
-  saveData();
+  dbDeleteRecord(id).catch(function(e) { console.log('DB del error:', e); });
 }
 
 function softDelete(id) {
   var record = appData.find(function(r) { return r.id === id; });
   if (!record) return;
   pendingDeleteId = id;
-  showToast('已删除 ' + record.number, '撤销', function() {
-    undoDelete();
-  });
+  showToast('已删除 ' + record.number, '撤销', function() { undoDelete(); });
   if (pendingDeleteTimer) clearTimeout(pendingDeleteTimer);
   pendingDeleteTimer = setTimeout(function() {
     if (pendingDeleteId === id) {
@@ -569,7 +721,7 @@ function toggleReceived(id) {
   if (!record) return;
   record.received = !record.received;
   record.receivedAt = record.received ? Date.now() : null;
-  saveData();
+  saveRecord(record);
 }
 
 function batchMarkReceived(ids) {
@@ -579,10 +731,10 @@ function batchMarkReceived(ids) {
     if (record && !record.received) {
       record.received = true;
       record.receivedAt = Date.now();
+      saveRecord(record);
       count++;
     }
   });
-  if (count > 0) saveData();
   exitBatchMode();
   render();
   return count;
@@ -789,8 +941,7 @@ function validateAddForm(number, customer, region) {
 }
 
 // === Init ===
-loadData();
-render();
+openDB().then(function() { loadData(); }).then(function() { render(); }).catch(function() { render(); });
 
 // === Render ===
 
