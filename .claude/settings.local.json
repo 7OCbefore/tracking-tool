@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo \"---EXIT=$?\")",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git *)",
+      "Bash(echo *)",
+      "Bash(node *)",
+      "PowerShell(git *)",
+      "Bash(gh auth *)",
+      "PowerShell(winget install *)",
+      "PowerShell(gh auth *)",
+      "PowerShell(Get-Command *)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); & \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" auth status 2>&1)",
+      "PowerShell(& \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" auth login --hostname github.com --web --git-protocol https 2>&1)",
+      "PowerShell(& \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" auth status 2>&1)",
+      "PowerShell(& \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" auth login --hostname github.com 2>&1)",
+      "PowerShell(Test-Connection *)",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"https://github.com\" -TimeoutSec 10 -UseBasicParsing; Write-Output \"OK: $\\($r.StatusCode\\)\" } catch { Write-Output \"FAIL: $\\($_.Exception.Message\\)\" })",
+      "PowerShell(& \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" auth login --hostname github.com --web 2>&1)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); Push-Location \"E:\\\\Development\\\\Personal\"; & \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" repo create tracking-tool --public --source=. --remote=origin --push --description \"快递单号管理工具 - 移动端 Web 应用\" 2>&1)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); & \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" api repos/7OCbefore/tracking-tool/pages --method POST -f \"source[branch]\"=\"master\" -f \"source[path]\"=\"/docs\" 2>&1)",
+      "PowerShell(Set-Content *)",
+      "WebFetch(domain:7ocbefore.github.io)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); & \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" api repos/7OCbefore/tracking-tool/pages/builds --jq \".[0]\" 2>&1)"
+    ]
+  }
+}
