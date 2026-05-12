@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#1890ff">
-<title>快递单号管理 v2.6</title>
+<title>快递单号管理 v2.5</title>
 <link rel="manifest" href="manifest.json">
 <style>
 * {
@@ -263,42 +263,44 @@ header h1 { font-size: 18px; font-weight: 600; color: #1a1a1a; }
 }
 #camera-header .header-btn { color: #fff; }
 #camera-status { font-size: 14px; color: #ccc; }
+#camera-view { flex: 1; width: 100%; object-fit: cover; }
+#scan-result { padding: 16px; background: rgba(0,0,0,0.85); color: #fff; text-align: center; font-size: 15px; min-height: 60px; }
+#scan-result .scanned-number { font-size: 20px; font-weight: 600; font-family: "Courier New", monospace; color: #52c41a; letter-spacing: 1px; }
+#scan-result .scan-match { color: #52c41a; font-weight: 500; }
+#scan-result .scan-no-match { color: #ff4d4f; }
+#scan-result .scan-retry-btn { margin-top: 8px; padding: 8px 20px; border: 1px solid #fff; border-radius: 8px; background: transparent; color: #fff; font-size: 15px; cursor: pointer; }
 
-/* Camera body */
-#camera-body {
-  flex: 1; position: relative; overflow: hidden;
-  min-height: 0;
-}
-#camera-view {
-  position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;
-}
-
-/* Result card overlay on video */
-#scan-result-card {
-  position: absolute; top: 12px; left: 12px; right: 12px;
-  background: rgba(0,0,0,0.85); border-radius: 12px;
+/* Scan match banner */
+.scan-match-banner {
   padding: 16px; text-align: center;
-  border-left: 4px solid #52c41a;
-  animation: slideDown 0.3s ease;
 }
-@keyframes slideDown {
-  from { transform: translateY(-30px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+.scan-match-banner .smb-icon {
+  width: 48px; height: 48px; border-radius: 50%; background: #52c41a; color: #fff;
+  font-size: 26px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 10px;
 }
-#scan-result-card.hidden { display: none; }
-#src-icon {
-  width: 36px; height: 36px; border-radius: 50%; background: #52c41a; color: #fff;
-  font-size: 20px; font-weight: 700; display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 8px;
+.scan-match-banner .smb-detail { font-size: 16px; color: #eee; margin: 6px 0 10px; }
+.scan-match-banner .smb-btn {
+  padding: 10px 28px; border: none; border-radius: 8px; background: #1890ff; color: #fff;
+  font-size: 16px; font-weight: 500; cursor: pointer;
 }
-#src-number { font-size: 18px; font-weight: 600; font-family: "Courier New", monospace; color: #fff; letter-spacing: 1px; margin-bottom: 4px; }
-#src-detail { font-size: 14px; color: #ccc; }
-#src-detail .src-match { color: #52c41a; }
-#src-detail .src-nomatch { color: #ff4d4f; }
+.scan-match-banner .smb-btn:active { background: #096dd9; }
 
-/* Bottom result area */
-#scan-result { padding: 12px 16px; background: rgba(0,0,0,0.85); color: #fff; text-align: center; font-size: 14px; min-height: 48px; }
-#scan-hint { color: #999; }
+/* Scan flash overlay */
+#camera-flash {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 3; opacity: 0; transition: opacity 0.15s;
+}
+#camera-flash.flash-green { background: rgba(82,196,26,0.25); opacity: 1; }
+#camera-flash.flash-orange { background: rgba(255,169,64,0.25); opacity: 1; }
+
+/* Scan tally */
+#scan-tally { font-size: 14px; font-weight: 600; color: #52c41a; min-width: 60px; text-align: right; }
+
+/* Result slide-in animation */
+.scan-match-banner { animation: slideUp 0.25s ease; }
+.scanned-number { animation: slideUp 0.25s ease; }
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
 /* === Utility === */
 .hidden { display: none !important; }
@@ -363,19 +365,11 @@ header h1 { font-size: 18px; font-weight: 600; color: #1a1a1a; }
   <div id="camera-header">
     <button id="btn-close-camera" class="header-btn">← 关闭</button>
     <span id="camera-status">对准条形码</span>
-    <span id="scan-count" style="font-size:13px;color:#aaa;">0 个</span>
+    <span id="scan-tally"></span>
   </div>
-  <div id="camera-body">
-    <video id="camera-view" autoplay playsinline></video>
-    <div id="scan-result-card" class="hidden">
-      <div id="src-icon"></div>
-      <div id="src-number"></div>
-      <div id="src-detail"></div>
-    </div>
-  </div>
-  <div id="scan-result">
-    <span id="scan-hint">将条形码对准屏幕中央</span>
-  </div>
+  <div id="camera-flash"></div>
+  <video id="camera-view" autoplay playsinline></video>
+  <div id="scan-result"></div>
 </div>
 
 <!-- ====== Screen 2: Add Record ====== -->
@@ -1117,7 +1111,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 var barcodeDetector = null;
 var scanStream = null;
-var scanMatchCount = 0;
 
 function isScanSupported() {
   return 'BarcodeDetector' in window;
@@ -1125,7 +1118,10 @@ function isScanSupported() {
 
 function initScanSupport() {
   var scanBtn = document.getElementById('btn-scan');
-  if (!isScanSupported()) { scanBtn.classList.add('hidden'); return; }
+  if (!isScanSupported()) {
+    scanBtn.classList.add('hidden');
+    return;
+  }
   if (BarcodeDetector.getSupportedFormats) {
     BarcodeDetector.getSupportedFormats().then(function(formats) {
       var supported = formats.some(function(f) {
@@ -1141,22 +1137,19 @@ document.getElementById('btn-scan').addEventListener('click', startScanner);
 document.getElementById('btn-close-camera').addEventListener('click', stopScanner);
 
 function startScanner() {
-  scanMatchCount = 0;
   var overlay = document.getElementById('camera-overlay');
   var video = document.getElementById('camera-view');
   var status = document.getElementById('camera-status');
-  var resultBottom = document.getElementById('scan-result');
+  var resultDiv = document.getElementById('scan-result');
   overlay.classList.remove('hidden');
-  resultBottom.innerHTML = '';
-  document.getElementById('scan-result-card').classList.add('hidden');
-  document.getElementById('scan-hint').textContent = '正在启动相机...';
+  resultDiv.innerHTML = '正在启动相机...';
 
   try {
     barcodeDetector = new BarcodeDetector({
       formats: ['code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf']
     });
   } catch (e) {
-    document.getElementById('scan-hint').textContent = '此设备不支持扫码功能';
+    resultDiv.innerHTML = '<span style="color:#ff4d4f">此设备不支持扫码功能，请使用搜索</span>';
     setTimeout(stopScanner, 2000);
     return;
   }
@@ -1168,11 +1161,11 @@ function startScanner() {
     video.srcObject = stream;
     return video.play();
   }).then(function() {
-    status.textContent = '扫描中...';
-    document.getElementById('scan-hint').textContent = '将条形码对准屏幕中央';
-    scanLoop(video);
+    status.textContent = '对准面单条形码';
+    resultDiv.innerHTML = '正在识别...';
+    scanLoop(video, resultDiv, status);
   }).catch(function() {
-    document.getElementById('scan-hint').textContent = '无法打开相机';
+    resultDiv.innerHTML = '<span style="color:#ff4d4f">无法打开相机</span>';
     setTimeout(stopScanner, 1500);
   });
 }
@@ -1180,6 +1173,7 @@ function startScanner() {
 function stopScanner() {
   document.getElementById('camera-overlay').classList.add('hidden');
   scanLoopActive = false;
+  document.getElementById('scan-tally').textContent = '';
   if (scanStream) {
     scanStream.getTracks().forEach(function(t) { t.stop(); });
     scanStream = null;
@@ -1188,49 +1182,22 @@ function stopScanner() {
 }
 
 var scanLoopActive = false;
+var scanMatchCount = 0;
+var scanFlashTimeout = null;
 
-function scanLoop(video) {
+function flashCamera(type) {
+  var flash = document.getElementById('camera-flash');
+  flash.className = type;
+  if (scanFlashTimeout) clearTimeout(scanFlashTimeout);
+  scanFlashTimeout = setTimeout(function() { flash.className = ''; }, 300);
+}
+
+function scanLoop(video, resultDiv, statusEl) {
   if (scanLoopActive) return;
   scanLoopActive = true;
+  scanMatchCount = 0;
   var scanStart = Date.now();
   var lastNumber = '';
-  var statusEl = document.getElementById('camera-status');
-
-  function showResultOnVideo(matched, number, customer, region) {
-    var card = document.getElementById('scan-result-card');
-    var icon = document.getElementById('src-icon');
-    var numEl = document.getElementById('src-number');
-    var detailEl = document.getElementById('src-detail');
-    var hintEl = document.getElementById('scan-hint');
-
-    card.classList.remove('hidden');
-    numEl.textContent = number;
-
-    if (matched) {
-      if (navigator.vibrate) navigator.vibrate(50);
-      scanMatchCount++;
-      icon.textContent = '✓';
-      icon.style.background = '#52c41a';
-      card.style.borderLeftColor = '#52c41a';
-      detailEl.innerHTML = '<span class="src-match">已匹配：' + escapeHtml(customer || '未知') + ' · ' + escapeHtml(region || '未知') + ' · 标记已收</span>';
-      hintEl.textContent = '已匹配 ' + scanMatchCount + ' 个 — 继续扫描';
-      statusEl.textContent = '✅ 匹配成功';
-      document.getElementById('scan-count').textContent = scanMatchCount + ' 个';
-    } else {
-      icon.textContent = '?';
-      icon.style.background = '#faad14';
-      card.style.borderLeftColor = '#faad14';
-      detailEl.innerHTML = '<span class="src-nomatch">未找到匹配记录，继续扫描...</span>';
-      hintEl.textContent = '未匹配，继续扫描下一个';
-      statusEl.textContent = '未匹配';
-    }
-
-    // Auto-hide result after 2.5s
-    clearTimeout(card._hideTimer);
-    card._hideTimer = setTimeout(function() {
-      card.classList.add('hidden');
-    }, 2500);
-  }
 
   function tick() {
     if (!scanLoopActive) return;
@@ -1239,22 +1206,38 @@ function scanLoop(video) {
         var number = barcodes[0].rawValue.trim();
         if (number !== lastNumber) {
           lastNumber = number;
-          statusEl.textContent = '识别中...';
           var matches = getFilteredData(number);
           if (matches.length > 0) {
             var record = matches[0];
             if (!record.received) toggleReceived(record.id);
+            scanMatchCount++;
+            document.getElementById('scan-tally').textContent = '✓ ' + scanMatchCount + '单';
+            if (navigator.vibrate) navigator.vibrate(50);
+            flashCamera('flash-green');
+            resultDiv.innerHTML =
+              '<div class="scan-match-banner">' +
+                '<div class="smb-icon">✓</div>' +
+                '<div class="scanned-number">' + escapeHtml(number) + '</div>' +
+                '<div class="smb-detail">' + escapeHtml(record.customer || '未知') +
+                ' · ' + escapeHtml(record.region || '未知') + ' · 已收到</div>' +
+                '<button class="smb-btn" onclick="showMatchedRecord()">查看详情</button>' +
+              '</div>';
             window._lastScannedId = record.id;
-            showResultOnVideo(true, number, record.customer, record.region);
+            statusEl.textContent = '✅ 已匹配';
           } else {
-            showResultOnVideo(false, number);
+            flashCamera('flash-orange');
+            resultDiv.innerHTML =
+              '<div class="scanned-number">' + escapeHtml(number) + '</div>' +
+              '<div class="scan-no-match">未找到匹配记录</div>' +
+              '<div style="font-size:13px;color:#999;margin-top:6px">该单号不在列表中，继续扫描...</div>';
+            statusEl.textContent = '未匹配';
           }
         }
       }
     }).catch(function() {});
 
     if (Date.now() - scanStart > 30000) {
-      document.getElementById('scan-hint').textContent = '扫码超时，请重新打开';
+      resultDiv.innerHTML = '<div style="color:#999">扫码超时，请点击关闭后重试</div>';
       scanLoopActive = false;
       return;
     }
