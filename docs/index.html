@@ -370,6 +370,7 @@ header h1 { font-size: 18px; font-weight: 600; color: #1a1a1a; }
     <div id="fab-menu" class="hidden">
       <button onclick="exportCSV(); toggleFabMenu();">导出 CSV</button>
       <button onclick="toggleFabMenu(); importCSV(function(imp, skip) { alert('导入完成：成功 ' + imp + ' 条，跳过 ' + skip + ' 条'); });">导入 CSV</button>
+      <button onclick="toggleFabMenu(); archiveData();">归档</button>
     </div>
   </div>
 </div>
@@ -782,6 +783,63 @@ function loadMore() {
   _loadingMore = true;
   render();
   _loadingMore = false;
+}
+
+// === Archive ===
+
+function getMeta(key) {
+  try { return localStorage.getItem(key); } catch (e) { return null; }
+}
+
+function setMeta(key, value) {
+  try { localStorage.setItem(key, value); } catch (e) {}
+}
+
+function getLastArchiveDate() { return getMeta('lastArchiveDate'); }
+
+function setLastArchiveDate(date) { setMeta('lastArchiveDate', date); }
+
+function archiveData() {
+  var count = appData.length;
+  if (count === 0) { alert('当前没有数据需要归档'); return; }
+
+  var startDate = new Date();
+  var half = startDate.getMonth() < 6 ? '上半年' : '下半年';
+  var year = startDate.getFullYear();
+  var dateStr = startDate.toISOString().slice(0, 10);
+  var filename = year + half + '_快递记录_' + dateStr + '.csv';
+
+  if (!confirm('当前共 ' + count + ' 条记录，将导出为：\n' + filename + '\n\n导出后会清空数据开始新的半年。\n确定继续吗？')) return;
+
+  // Export CSV
+  var rows = [['快递单号', '客户名称', '地区', '录入日期', '状态', '备注']];
+  appData.forEach(function(r) {
+    rows.push([r.number, r.customer, r.region, r.date, r.received ? '已收到' : '待收件', r.notes]);
+  });
+  var csv = rows.map(function(row) {
+    return row.map(function(cell) { return '"' + (cell || '').replace(/"/g, '""') + '"'; }).join(',');
+  }).join('\n');
+  var BOM = '﻿';
+  var blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  // Clear all data
+  dbClearAll().then(function() {
+    appData = [];
+    setLastArchiveDate(dateStr);
+    resetPagination();
+    currentTab = 'pending';
+    if (batchMode) exitBatchMode();
+    render();
+    alert('归档完成！已导出 ' + count + ' 条记录并清零开始新的半年。\n\n文件名：' + filename);
+  }).catch(function() {
+    alert('归档失败，请重试');
+  });
 }
 
 // === Auto-remember last input ===
