@@ -607,7 +607,71 @@ header h1 {
 </div>
 
 <script>
-// JS in Task 3+
+// === Data Layer ===
+
+const STORAGE_KEY = 'tracking_data_v1';
+
+let appData = [];
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    appData = raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    appData = [];
+  }
+}
+
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+}
+
+function generateId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function addRecord(number, customer, region, notes) {
+  const record = {
+    id: generateId(),
+    number: number.trim(),
+    customer: customer.trim(),
+    region: region.trim(),
+    notes: notes ? notes.trim() : '',
+    date: new Date().toLocaleDateString('zh-CN', {
+      year: 'numeric', month: '2-digit', day: '2-digit'
+    }),
+    received: false,
+    receivedAt: null,
+    createdAt: Date.now()
+  };
+  appData.unshift(record);
+  saveData();
+  return record;
+}
+
+function deleteRecord(id) {
+  appData = appData.filter(r => r.id !== id);
+  saveData();
+}
+
+function toggleReceived(id) {
+  const record = appData.find(r => r.id === id);
+  if (!record) return;
+  record.received = !record.received;
+  record.receivedAt = record.received ? Date.now() : null;
+  saveData();
+}
+
+function getFilteredData(query) {
+  if (!query) return appData;
+  const q = query.trim().toLowerCase();
+  return appData.filter(r =>
+    r.number.toLowerCase().includes(q) ||
+    r.customer.toLowerCase().includes(q) ||
+    r.region.toLowerCase().includes(q) ||
+    (r.notes && r.notes.toLowerCase().includes(q))
+  );
+}
 </script>
 </body>
 </html>
