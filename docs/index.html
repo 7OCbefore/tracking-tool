@@ -503,26 +503,46 @@ header h1 {
     <div id="stats"></div>
   </header>
 
+  <!-- Tabs -->
+  <div id="tab-bar">
+    <button id="tab-pending" class="tab active" onclick="switchTab('pending')">待收件</button>
+    <button id="tab-received" class="tab" onclick="switchTab('received')">已收到</button>
+  </div>
+
   <div id="search-bar">
     <input type="search" id="search-input" placeholder="搜索单号、客户、地区..." autocomplete="off">
     <button id="btn-clear-search" class="hidden">x</button>
   </div>
 
-  <div id="card-list">
-    <!-- Cards rendered by JS -->
+  <!-- Batch mode bar -->
+  <div id="batch-bar" class="hidden">
+    <button id="btn-batch-cancel" onclick="exitBatchMode()">取消</button>
+    <span id="batch-count">已选 0 项</span>
+    <button id="btn-batch-receive" class="btn-batch-primary" onclick="batchMarkSelected()">标记已收</button>
   </div>
+
+  <div id="card-list"></div>
 
   <div id="empty-state" class="hidden">
     <div class="empty-icon">📦</div>
-    <p>还没有快递记录</p>
-    <p class="empty-hint">点下方按钮添加第一条</p>
+    <p></p>
+    <p class="empty-hint"></p>
+    <button id="btn-add-from-empty" class="btn-primary hidden">添加此单号？</button>
   </div>
 
-  <button id="btn-add" class="fab">+</button>
-  <button id="btn-scan" class="fab-scan">📷</button>
+  <!-- FAB group -->
+  <div id="fab-group">
+    <button id="btn-add" class="fab">+</button>
+    <button id="btn-scan" class="fab-scan">📷</button>
+    <button id="fab-actions" class="fab-actions-btn" onclick="toggleFabMenu()">📋</button>
+    <div id="fab-menu" class="hidden">
+      <button onclick="exportCSV(); toggleFabMenu();">导出 CSV</button>
+      <button onclick="toggleFabMenu(); importCSV(function(imp, skip) { alert('导入完成：成功 ' + imp + ' 条，跳过 ' + skip + ' 条'); });">导入 CSV</button>
+    </div>
+  </div>
 </div>
 
-<!-- ====== Camera overlay (scan barcode) ====== -->
+<!-- ====== Camera overlay ====== -->
 <div id="camera-overlay" class="hidden">
   <div id="camera-header">
     <button id="btn-close-camera" class="header-btn">← 关闭</button>
@@ -542,16 +562,20 @@ header h1 {
 
   <form id="add-form">
     <div class="form-group">
-      <label for="input-number">快递单号</label>
+      <label for="input-number">快递单号 <span class="required">*</span></label>
       <input type="text" id="input-number" required placeholder="输入或粘贴快递单号" autocomplete="off">
     </div>
     <div class="form-group">
       <label for="input-customer">客户名称</label>
-      <input type="text" id="input-customer" required placeholder="输入客户名称" autocomplete="off">
+      <input type="text" id="input-customer" placeholder="输入客户名称（选填）" autocomplete="off">
     </div>
     <div class="form-group">
       <label for="input-region">地区</label>
-      <input type="text" id="input-region" required placeholder="如：上海、北京、广东" autocomplete="off">
+      <input type="text" id="input-region" placeholder="如：上海、北京、广东（选填）" autocomplete="off">
+    </div>
+    <div class="form-group" id="recent-picks-group" style="display:none;">
+      <label>最近常用</label>
+      <div id="recent-picks"></div>
     </div>
     <div class="form-group">
       <label for="input-notes">备注（可选）</label>
@@ -604,6 +628,12 @@ header h1 {
       <button id="btn-delete" class="btn-danger btn-large">删除此记录</button>
     </div>
   </div>
+</div>
+
+<!-- ====== Toast ====== -->
+<div id="toast" class="hidden">
+  <span id="toast-message"></span>
+  <button id="toast-action" class="toast-btn"></button>
 </div>
 
 <script>
