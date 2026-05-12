@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#1890ff">
-<title>快递单号管理 v2.1</title>
+<title>快递单号管理 v2.3</title>
 <link rel="manifest" href="manifest.json">
 <style>
 * {
@@ -285,7 +285,7 @@ header h1 { font-size: 18px; font-weight: 600; color: #1a1a1a; }
 <!-- ====== Screen 1: Main List ====== -->
 <div id="screen-list" class="screen active">
   <header>
-    <h1>快递单号 v2.1</h1>
+    <h1>快递单号 v2.3</h1>
     <div id="stats"></div>
   </header>
 
@@ -423,6 +423,18 @@ header h1 { font-size: 18px; font-weight: 600; color: #1a1a1a; }
 </div>
 
 <script>
+// === Kill all service workers and caches ===
+if (navigator.serviceWorker) {
+  navigator.serviceWorker.getRegistrations().then(function(regs) {
+    regs.forEach(function(reg) { reg.unregister(); });
+  });
+}
+if (window.caches) {
+  caches.keys().then(function(names) {
+    names.forEach(function(name) { caches.delete(name); });
+  });
+}
+
 // === Data Layer V2 ===
 
 var STORAGE_KEY = 'tracking_data_v2';
@@ -1189,24 +1201,6 @@ function showMatchedRecord() {
   }
 }
 
-// === Service Worker ===
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('sw.js').then(function(reg) {
-      reg.addEventListener('updatefound', function() {
-        var newWorker = reg.installing;
-        newWorker.addEventListener('statechange', function() {
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            window.location.reload();
-          }
-        });
-      });
-    }).catch(function() {});
-  });
-  navigator.serviceWorker.addEventListener('controllerchange', function() {
-    window.location.reload();
-  });
-}
 
 </script>
 </body>
