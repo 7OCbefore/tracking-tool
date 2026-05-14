@@ -52,15 +52,14 @@ export default function AddForm() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const saveRecord = async () => {
     if (!number.trim()) {
       showToast('请填写快递单号', 'error');
-      return;
+      return false;
     }
     if (!customer.trim() && !region.trim()) {
       showToast('客户名称和地区至少填写一个', 'error');
-      return;
+      return false;
     }
     setSaving(true);
     try {
@@ -72,12 +71,35 @@ export default function AddForm() {
       });
       localStorage.setItem('tracking_last_customer', customer.trim());
       localStorage.setItem('tracking_last_region', region.trim());
-      showToast('添加成功', 'success');
-      goBack();
+      return true;
     } catch {
       showToast('添加失败，请重试', 'error');
+      return false;
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const ok = await saveRecord();
+    if (ok) {
+      showToast('添加成功', 'success');
+      goBack();
+    }
+  };
+
+  const handleSaveAndContinue = async () => {
+    const ok = await saveRecord();
+    if (ok) {
+      showToast('添加成功', 'success');
+      setNumber('');
+      setNotes('');
+      // Re-focus number input for next entry
+      setTimeout(() => {
+        const input = document.querySelector<HTMLInputElement>('#add-form input[type="text"]');
+        input?.focus();
+      }, 100);
     }
   };
 
@@ -92,7 +114,7 @@ export default function AddForm() {
         <h1 className="text-lg font-bold text-gray-900">添加快递</h1>
       </header>
 
-      <form onSubmit={handleSubmit} className="p-4 space-y-4">
+      <form id="add-form" onSubmit={handleSubmit} className="p-4 space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
             快递单号 <span className="text-danger">*</span>
@@ -174,6 +196,15 @@ export default function AddForm() {
                      disabled:opacity-50 active:bg-blue-700 transition-colors"
         >
           {saving ? '保存中...' : '保存'}
+        </button>
+        <button
+          type="button"
+          onClick={handleSaveAndContinue}
+          disabled={saving}
+          className="w-full py-3.5 bg-white text-brand rounded-xl font-medium text-base
+                     border-2 border-brand disabled:opacity-50 active:bg-blue-50 transition-colors"
+        >
+          {saving ? '保存中...' : '保存并继续添加'}
         </button>
       </form>
     </div>
