@@ -84,20 +84,19 @@ export default function PackageDetail() {
         </div>
 
         <div className="flex gap-3">
-          {isPending && (
-            <button
-              onClick={handleToggleStatus}
-              className="flex-1 py-3 bg-success text-white rounded-xl font-medium text-sm
-                         active:bg-green-600 transition-colors"
-            >
-              标记已收到
-            </button>
-          )}
+          <button
+            onClick={handleToggleStatus}
+            className={`flex-1 py-3 rounded-xl font-medium text-sm transition-colors ${
+              isPending
+                ? 'bg-success text-white active:bg-green-600'
+                : 'bg-orange-50 text-orange-600 border border-orange-200 active:bg-orange-100'
+            }`}
+          >
+            {isPending ? '标记已收到' : '撤销已收'}
+          </button>
           <button
             onClick={() => setShowDeleteModal(true)}
-            className={`${isPending ? '' : 'flex-1'} py-3 bg-white text-danger rounded-xl
-                       font-medium text-sm border border-gray-200 active:bg-red-50 transition-colors
-                       ${isPending ? 'px-6' : ''}`}
+            className="py-3 bg-white text-danger rounded-xl font-medium text-sm border border-gray-200 active:bg-red-50 transition-colors px-4"
           >
             删除
           </button>
