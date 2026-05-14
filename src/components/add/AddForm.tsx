@@ -9,6 +9,22 @@ export default function AddForm() {
   const searchToAdd = useUIStore((s) => s.searchToAdd);
   const setSearchToAdd = useUIStore((s) => s.setSearchToAdd);
 
+  const allPackages = usePackageStore((s) => s.packages);
+
+  const recentPicks = (() => {
+    const seen = new Set<string>();
+    const result: { customer: string; region: string }[] = [];
+    for (const p of allPackages) {
+      const key = `${p.customer}||${p.region}`;
+      if (key !== '||' && !seen.has(key)) {
+        seen.add(key);
+        result.push({ customer: p.customer, region: p.region });
+        if (result.length >= 3) break;
+      }
+    }
+    return result;
+  })();
+
   const [number, setNumber] = useState('');
   const [customer, setCustomer] = useState('');
   const [region, setRegion] = useState('');
@@ -118,6 +134,25 @@ export default function AddForm() {
                        placeholder:text-gray-300"
           />
         </div>
+
+        {recentPicks.length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">最近使用</label>
+            <div className="flex flex-wrap gap-2">
+              {recentPicks.map((pick, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => { setCustomer(pick.customer); setRegion(pick.region); }}
+                  className="px-3 py-1.5 bg-gray-100 rounded-lg text-sm text-gray-600
+                             active:bg-gray-200 transition-colors"
+                >
+                  {pick.customer || '未知'} / {pick.region || '未知'}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">备注（可选）</label>
