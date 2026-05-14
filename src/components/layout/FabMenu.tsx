@@ -35,6 +35,7 @@ export default function FabMenu() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [archiveCount, setArchiveCount] = useState(0);
 
   const handleItemClick = (screen: 'add' | 'scan') => {
     setOpen(false);
@@ -59,20 +60,26 @@ export default function FabMenu() {
 
   const handleArchive = () => {
     setOpen(false);
+    setArchiveCount(usePackageStore.getState().packages.length);
     setShowArchiveModal(true);
   };
 
   const confirmArchive = async () => {
-    const all = usePackageStore.getState().packages;
-    if (all.length === 0) {
+    if (archiveCount === 0) {
       showToast('暂无数据需要归档', 'error');
       setShowArchiveModal(false);
       return;
     }
-    await archiveAllPackages(all);
-    setShowArchiveModal(false);
-    showToast(`归档完成，已导出 ${all.length} 条记录`, 'success');
-    usePackageStore.getState().loadPage(1);
+    try {
+      const all = usePackageStore.getState().packages;
+      await archiveAllPackages(all);
+      setShowArchiveModal(false);
+      showToast(`归档完成，已导出 ${archiveCount} 条记录`, 'success');
+      usePackageStore.getState().loadPage(1);
+    } catch {
+      setShowArchiveModal(false);
+      showToast('归档失败，请重试', 'error');
+    }
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -172,7 +179,7 @@ export default function FabMenu() {
       <Modal
         open={showArchiveModal}
         title="确认归档"
-        message={`将导出全部 ${usePackageStore.getState().packages.length} 条记录为 CSV 文件，然后清空数据库开始新的周期。确定继续吗？`}
+        message={`将导出全部 ${archiveCount} 条记录为 CSV 文件，然后清空数据库开始新的周期。确定继续吗？`}
         confirmLabel="导出并归档"
         danger
         onConfirm={confirmArchive}

@@ -1,4 +1,5 @@
 import { db } from './db';
+import { exportToCSV } from './csv';
 import type { Package } from '@/types/package';
 
 export async function getArchivedPackages(
@@ -44,8 +45,6 @@ export function setLastArchiveDate(date: string): void {
 }
 
 export async function archiveAllPackages(packages: Package[]): Promise<void> {
-  // Export to CSV
-  const { exportToCSV } = await import('./csv');
   const csv = exportToCSV(packages);
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -56,8 +55,6 @@ export async function archiveAllPackages(packages: Package[]): Promise<void> {
   a.click();
   URL.revokeObjectURL(url);
 
-  // Clear all data
-  const { db } = await import('./db');
   await db.packages.clear();
 
   // Record archive date
