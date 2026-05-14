@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { useUIStore } from '@/stores/uiStore';
 import { usePackageStore } from '@/stores/packageStore';
 import { downloadCSV, parseCSV, readCSVFile } from '@/services/csv';
+import { archiveAllPackages } from '@/services/archive';
+import Modal from '@/components/ui/Modal';
 
 export default function FabMenu() {
   const [open, setOpen] = useState(false);
@@ -32,6 +34,7 @@ export default function FabMenu() {
   }, [open]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
 
   const handleItemClick = (screen: 'add' | 'scan') => {
     setOpen(false);
@@ -52,6 +55,24 @@ export default function FabMenu() {
   const handleImportClick = () => {
     setOpen(false);
     fileInputRef.current?.click();
+  };
+
+  const handleArchive = () => {
+    setOpen(false);
+    setShowArchiveModal(true);
+  };
+
+  const confirmArchive = async () => {
+    const all = usePackageStore.getState().packages;
+    if (all.length === 0) {
+      showToast('暂无数据需要归档', 'error');
+      setShowArchiveModal(false);
+      return;
+    }
+    await archiveAllPackages(all);
+    setShowArchiveModal(false);
+    showToast(`归档完成，已导出 ${all.length} 条记录`, 'success');
+    usePackageStore.getState().loadPage(1);
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -128,6 +149,16 @@ export default function FabMenu() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
             </svg>
           </button>
+          <button
+            onClick={handleArchive}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl shadow-lg
+                       text-sm text-gray-700 active:bg-gray-50 transition-colors"
+          >
+            <span>归档</span>
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+            </svg>
+          </button>
           <input
             ref={fileInputRef}
             type="file"
@@ -137,6 +168,16 @@ export default function FabMenu() {
           />
         </div>
       )}
+
+      <Modal
+        open={showArchiveModal}
+        title="确认归档"
+        message={`将导出全部 ${usePackageStore.getState().packages.length} 条记录为 CSV 文件，然后清空数据库开始新的周期。确定继续吗？`}
+        confirmLabel="导出并归档"
+        danger
+        onConfirm={confirmArchive}
+        onCancel={() => setShowArchiveModal(false)}
+      />
 
       <button
         onClick={() => setOpen(!open)}

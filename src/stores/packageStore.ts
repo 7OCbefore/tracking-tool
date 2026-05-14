@@ -23,6 +23,7 @@ interface PackageState {
   importCSV: (records: PackageInput[]) => Promise<number>;
   exportCSV: () => void;
   archive: (id: string) => Promise<void>;
+  clearAll: () => Promise<void>;
 }
 
 function createPackage(input: PackageInput): Package {
@@ -155,5 +156,10 @@ export const usePackageStore = create<PackageState>((set, get) => ({
   archive: async (id) => {
     await db.packages.update(id, { isArchived: 1, archivedAt: Date.now() });
     await get().loadPage();
+  },
+
+  clearAll: async () => {
+    await db.packages.clear();
+    set({ packages: [], totalCount: 0, currentPage: 1 });
   },
 }));

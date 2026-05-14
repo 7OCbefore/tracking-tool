@@ -1,4 +1,5 @@
 import { usePackageStore } from '@/stores/packageStore';
+import { getLastArchiveDate } from '@/services/archive';
 
 export default function Header() {
   const packages = usePackageStore((s) => s.packages);
@@ -6,6 +7,7 @@ export default function Header() {
   const activeTab = usePackageStore((s) => s.activeTab);
   const pendingCount = activeTab === 'pending' ? totalCount : packages.filter((p) => p.status === 'pending').length;
   const receivedCount = activeTab === 'received' ? totalCount : packages.filter((p) => p.status === 'received').length;
+  const lastArchiveDate = getLastArchiveDate();
 
   return (
     <header className="bg-brand text-white px-4 pt-12 pb-4 safe-top">
@@ -13,6 +15,11 @@ export default function Header() {
       <p className="text-sm text-blue-100 mt-1">
         待收件 <span className="font-bold text-white">{pendingCount}</span> 件 · 已收到{' '}
         <span className="font-bold text-white">{receivedCount}</span> 件
+        {lastArchiveDate && (
+          <span className="text-blue-100 ml-2 text-xs">
+            · 归档: {lastArchiveDate}
+          </span>
+        )}
       </p>
     </header>
   );
