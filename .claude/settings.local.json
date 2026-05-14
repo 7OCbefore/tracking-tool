@@ -20,11 +20,18 @@
       "PowerShell(Test-Connection *)",
       "PowerShell(try { $r = Invoke-WebRequest -Uri \"https://github.com\" -TimeoutSec 10 -UseBasicParsing; Write-Output \"OK: $\\($r.StatusCode\\)\" } catch { Write-Output \"FAIL: $\\($_.Exception.Message\\)\" })",
       "PowerShell(& \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" auth login --hostname github.com --web 2>&1)",
-      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); Push-Location \"E:\\\\Development\\\\Personal\"; & \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" repo create tracking-tool --public --source=. --remote=origin --push --description \"快递单号管理工具 - 移动端 Web 应用\" 2>&1)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); Push-Location \"E:\\\\Development\\\\Personal\\\\tracking-tool\"; & \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" repo create tracking-tool --public --source=. --remote=origin --push --description \"快递单号管理工具 - 移动端 Web 应用\" 2>&1)",
       "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); & \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" api repos/7OCbefore/tracking-tool/pages --method POST -f \"source[branch]\"=\"master\" -f \"source[path]\"=\"/docs\" 2>&1)",
       "PowerShell(Set-Content *)",
       "WebFetch(domain:7ocbefore.github.io)",
-      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); & \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" api repos/7OCbefore/tracking-tool/pages/builds --jq \".[0]\" 2>&1)"
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); & \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" api repos/7OCbefore/tracking-tool/pages/builds --jq \".[0]\" 2>&1)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); Push-Location \"E:\\\\Development\\\\Personal\\\\tracking-tool\"; & \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" push 2>&1)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); & \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" api repos/7OCbefore/tracking-tool/pages/builds --jq \".[0].status\" 2>&1)",
+      "PowerShell(Get-Content *)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); $build = & \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\" api repos/7OCbefore/tracking-tool/pages/builds --jq \".[0]\" 2>&1; Write-Output \"Status: $\\($build | ConvertFrom-Json | Select-Object -ExpandProperty status\\)\"; Write-Output \"Error: $\\($build | ConvertFrom-Json | Select-Object -ExpandProperty error\\)\")",
+      "PowerShell(Write-Output \"File size: $\\(\\(Get-Item \"E:\\\\Development\\\\Personal\\\\tracking-tool\\\\docs\\\\index.html\"\\).Length / 1KB\\) KB\"; Write-Output \"Line count: $\\(\\(Get-Content \"E:\\\\Development\\\\Personal\\\\tracking-tool\\\\docs\\\\index.html\"\\).Count\\)\"; Write-Output \"Records estimate: local storage ~5MB limit\")",
+      "Bash(Start-Process *)",
+      "PowerShell(Start-Process \"E:\\\\Development\\\\Personal\\\\tracking-tool\\\\docs\\\\index.html\")"
     ]
   }
 }
