@@ -2,6 +2,7 @@ import type { Package } from '@/types/package';
 import { useUIStore } from '@/stores/uiStore';
 import { usePackageStore } from '@/stores/packageStore';
 import { formatDate } from '@/utils/format';
+import { highlightText } from '@/utils/highlight';
 
 interface PackageCardProps {
   pkg: Package;
@@ -13,6 +14,7 @@ export default function PackageCard({ pkg, isBatchMode, isSelected }: PackageCar
   const navigate = useUIStore((s) => s.navigate);
   const toggleSelect = useUIStore((s) => s.toggleSelect);
   const toggleStatus = usePackageStore((s) => s.toggleStatus);
+  const searchQuery = usePackageStore((s) => s.searchQuery);
 
   const isPending = pkg.status === 'pending';
   const statusColor = isPending ? 'border-l-orange-400' : 'border-l-green-400';
@@ -57,9 +59,10 @@ export default function PackageCard({ pkg, isBatchMode, isSelected }: PackageCar
 
       <div className={isBatchMode ? 'ml-8' : ''}>
         <div className="flex items-center justify-between">
-          <span className="font-mono text-base tracking-wider text-gray-900">
-            {pkg.number}
-          </span>
+          <span
+            className="font-mono text-base tracking-wider text-gray-900"
+            dangerouslySetInnerHTML={{ __html: highlightText(pkg.number, searchQuery) }}
+          />
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusBadge}`}>
             {statusText}
           </span>
@@ -67,16 +70,23 @@ export default function PackageCard({ pkg, isBatchMode, isSelected }: PackageCar
 
         <div className="flex items-center gap-2 mt-1.5">
           {pkg.customer && (
-            <span className="text-xs text-brand bg-brand-light px-2 py-0.5 rounded">👤 {pkg.customer}</span>
+            <span className="text-xs text-brand bg-brand-light px-2 py-0.5 rounded">
+              👤 <span dangerouslySetInnerHTML={{ __html: highlightText(pkg.customer, searchQuery) }} />
+            </span>
           )}
           {pkg.region && (
-            <span className="text-xs text-gray-400">📍 {pkg.region}</span>
+            <span className="text-xs text-gray-400">
+              📍 <span dangerouslySetInnerHTML={{ __html: highlightText(pkg.region, searchQuery) }} />
+            </span>
           )}
           <span className="text-xs text-gray-400">{formatDate(pkg.createdAt)}</span>
         </div>
 
         {pkg.notes && (
-          <p className="text-sm text-gray-500 mt-1.5 truncate">{pkg.notes}</p>
+          <p
+            className="text-sm text-gray-500 mt-1.5 truncate"
+            dangerouslySetInnerHTML={{ __html: highlightText(pkg.notes, searchQuery) }}
+          />
         )}
       </div>
 
