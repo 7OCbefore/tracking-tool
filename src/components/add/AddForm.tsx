@@ -6,6 +6,8 @@ export default function AddForm() {
   const add = usePackageStore((s) => s.add);
   const goBack = useUIStore((s) => s.goBack);
   const showToast = useUIStore((s) => s.showToast);
+  const searchToAdd = useUIStore((s) => s.searchToAdd);
+  const setSearchToAdd = useUIStore((s) => s.setSearchToAdd);
 
   const [number, setNumber] = useState('');
   const [customer, setCustomer] = useState('');
@@ -25,6 +27,11 @@ export default function AddForm() {
     if (scanResult) {
       setNumber(scanResult);
       sessionStorage.removeItem('scan_result');
+    }
+
+    if (searchToAdd) {
+      setNumber(searchToAdd);
+      setSearchToAdd(null);
     }
   }, []);
 

@@ -1,8 +1,11 @@
 import { usePackageStore } from '@/stores/packageStore';
+import { useUIStore } from '@/stores/uiStore';
 
 export default function EmptyState() {
   const activeTab = usePackageStore((s) => s.activeTab);
   const searchQuery = usePackageStore((s) => s.searchQuery);
+  const navigate = useUIStore((s) => s.navigate);
+  const setSearchToAdd = useUIStore((s) => s.setSearchToAdd);
 
   if (searchQuery) {
     return (
@@ -12,6 +15,13 @@ export default function EmptyState() {
         </svg>
         <p className="text-sm">没有匹配的记录</p>
         <p className="text-xs mt-1 text-gray-300">关键词：{searchQuery}</p>
+        <button
+          onClick={() => { setSearchToAdd(searchQuery); navigate('add'); }}
+          className="mt-4 px-5 py-2.5 bg-brand text-white rounded-xl text-sm font-medium
+                     active:bg-blue-700 transition-colors"
+        >
+          添加此单号？
+        </button>
       </div>
     );
   }

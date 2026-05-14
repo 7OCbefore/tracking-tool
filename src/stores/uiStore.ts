@@ -9,6 +9,7 @@ interface UIState {
   toastMessage: string | null;
   toastType: ToastType;
   toastUndoAction: (() => void) | null;
+  searchToAdd: string | null;
 
   navigate: (screen: Screen, params?: { id?: string }) => void;
   goBack: () => void;
@@ -18,6 +19,7 @@ interface UIState {
   clearSelection: () => void;
   showToast: (message: string, type: ToastType, undoAction?: () => void) => void;
   hideToast: () => void;
+  setSearchToAdd: (query: string | null) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -28,6 +30,7 @@ export const useUIStore = create<UIState>((set) => ({
   toastMessage: null,
   toastType: 'success',
   toastUndoAction: null,
+  searchToAdd: null,
 
   navigate: (screen, params) => {
     set({
@@ -81,4 +84,6 @@ export const useUIStore = create<UIState>((set) => ({
   hideToast: () => {
     set({ toastMessage: null, toastUndoAction: null });
   },
+
+  setSearchToAdd: (query) => set({ searchToAdd: query }),
 }));
