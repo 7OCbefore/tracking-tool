@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useUIStore } from '@/stores/uiStore';
 import { usePackageStore } from '@/stores/packageStore';
 import { downloadCSV, parseCSV, readCSVFile } from '@/services/csv';
@@ -9,6 +9,28 @@ export default function FabMenu() {
   const toggleBatchMode = useUIStore((s) => s.toggleBatchMode);
   const showToast = useUIStore((s) => s.showToast);
   const importCSV = usePackageStore((s) => s.importCSV);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClick = (e: MouseEvent | TouchEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('touchstart', handleClick, { passive: true });
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('touchstart', handleClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open]);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleItemClick = (screen: 'add' | 'scan') => {
@@ -53,7 +75,7 @@ export default function FabMenu() {
   };
 
   return (
-    <div className="fixed bottom-6 right-4 flex flex-col items-end gap-3 z-20 safe-bottom">
+    <div ref={menuRef} className="fixed bottom-6 right-4 flex flex-col items-end gap-3 z-20 safe-bottom">
       {open && (
         <div className="flex flex-col items-end gap-2 mb-2">
           <button
