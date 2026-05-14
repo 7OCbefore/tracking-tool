@@ -1,7 +1,19 @@
+import Header from '@/components/layout/Header';
+import TabBar from '@/components/layout/TabBar';
+import SearchBar from '@/components/layout/SearchBar';
+import PackageList from '@/components/list/PackageList';
+import BatchBar from '@/components/list/BatchBar';
+import FabMenu from '@/components/layout/FabMenu';
+
 export default function App() {
   return (
-    <div className="min-h-dvh flex items-center justify-center">
-      <p className="text-xl text-gray-500">快递单号管理 v4.0 — 加载中...</p>
+    <div className="min-h-dvh bg-gray-50 pb-20">
+      <Header />
+      <TabBar />
+      <SearchBar />
+      <PackageList />
+      <BatchBar />
+      <FabMenu />
     </div>
   );
 }
