@@ -142,11 +142,10 @@ export const usePackageStore = create<PackageState>((set, get) => ({
   },
 
   exportCSV: () => {
-    // CSV download handled in service layer - will be wired in Phase 5
     const { packages } = get();
-    if (typeof window !== 'undefined') {
-      import('@/services/csv').then(({ downloadCSV }) => downloadCSV(packages));
-    }
+    if (packages.length === 0) return;
+    // Dynamic import to avoid circular dependency
+    import('@/services/csv').then(({ downloadCSV }) => downloadCSV(packages));
   },
 
   archive: async (id) => {
