@@ -121,7 +121,7 @@ export default function FabMenu() {
             className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl shadow-lg
                        text-sm text-gray-700 active:bg-gray-50 transition-colors"
           >
-            <span>扫码录入</span>
+            <span>扫码匹配</span>
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2m4 0v-2m0 2v2m-4-6h2m-2-2v4m-8-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>

@@ -59,8 +59,9 @@ export default function BarcodeScanner() {
     useBarcodeDetector(handleDetected);
 
   useEffect(() => {
+    startScanning();
     return () => stopScanning();
-  }, [stopScanning]);
+  }, []);
 
   const handleClose = () => {
     stopScanning();
@@ -87,7 +88,7 @@ export default function BarcodeScanner() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-        <span className="text-white text-sm font-medium">扫描快递单号</span>
+        <span className="text-white text-sm font-medium">扫码匹配</span>
         <span className="text-white text-sm font-mono tabular-nums min-w-[4rem] text-right">
           {scanCount > 0 ? `✓ ${scanCount}单` : ''}
         </span>
