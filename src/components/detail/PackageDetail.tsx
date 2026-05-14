@@ -18,7 +18,7 @@ export default function PackageDetail() {
 
   useEffect(() => {
     if (detailId) {
-      db.packages.get(detailId).then(setPkg);
+      db.packages.get(detailId).then((p) => setPkg(p ?? null));
     }
   }, [detailId]);
 

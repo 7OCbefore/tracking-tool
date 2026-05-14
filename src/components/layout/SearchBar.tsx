@@ -4,7 +4,7 @@ import { usePackageStore } from '@/stores/packageStore';
 export default function SearchBar() {
   const setSearch = usePackageStore((s) => s.setSearch);
   const [value, setValue] = useState('');
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     return () => clearTimeout(timerRef.current);

@@ -20,7 +20,7 @@ interface UIState {
   hideToast: () => void;
 }
 
-export const useUIStore = create<UIState>((set, get) => ({
+export const useUIStore = create<UIState>((set) => ({
   currentScreen: 'list',
   batchMode: false,
   selectedIds: new Set(),

@@ -6,7 +6,7 @@ export default function Toast() {
   const toastType = useUIStore((s) => s.toastType);
   const toastUndoAction = useUIStore((s) => s.toastUndoAction);
   const hideToast = useUIStore((s) => s.hideToast);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     if (toastMessage) {

@@ -5,8 +5,6 @@ import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import PackageCard from './PackageCard';
 import EmptyState from './EmptyState';
 
-const PAGE_SIZE = 20;
-
 export default function PackageList() {
   const packages = usePackageStore((s) => s.packages);
   const totalCount = usePackageStore((s) => s.totalCount);
