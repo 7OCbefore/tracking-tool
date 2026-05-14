@@ -8,15 +8,16 @@ function formatCSVDate(ts?: number): string {
 
 export function exportToCSV(packages: Package[]): string {
   const BOM = '\uFEFF';
-  const header = '快递单号,快递公司,备注,状态,录入时间,签收时间';
+  const header = '快递单号,客户名称,地区,备注,状态,录入时间,签收时间';
 
   const rows = packages.map((p) => {
     const status = p.status === 'pending' ? '待收件' : '已收到';
     const escape = (s: string) => `"${s.replace(/"/g, '""')}"`;
     return [
-      escape(p.trackingNumber),
-      escape(p.company),
-      escape(p.remark),
+      escape(p.number),
+      escape(p.customer),
+      escape(p.region),
+      escape(p.notes),
       status,
       formatCSVDate(p.createdAt),
       formatCSVDate(p.receivedAt),
@@ -42,9 +43,10 @@ export function parseCSV(text: string): PackageInput[] {
   if (lines.length < 2) return [];
 
   const header = lines[0].replace(/^\uFEFF/, '').split(',').map((h) => h.trim());
-  const numberIdx = header.findIndex((h) => h === '快递单号' || h === 'trackingNumber');
-  const companyIdx = header.findIndex((h) => h === '快递公司' || h === 'company');
-  const remarkIdx = header.findIndex((h) => h === '备注' || h === 'remark');
+  const numberIdx = header.findIndex((h) => h === '快递单号' || h === 'number');
+  const customerIdx = header.findIndex((h) => h === '客户名称' || h === 'customer');
+  const regionIdx = header.findIndex((h) => h === '地区' || h === 'region');
+  const notesIdx = header.findIndex((h) => h === '备注' || h === 'notes');
 
   if (numberIdx === -1) return [];
 
@@ -55,9 +57,10 @@ export function parseCSV(text: string): PackageInput[] {
     if (!num) continue;
 
     records.push({
-      trackingNumber: num,
-      company: cols[companyIdx]?.trim() || '',
-      remark: cols[remarkIdx]?.trim() || '',
+      number: num,
+      customer: cols[customerIdx]?.trim() || '',
+      region: cols[regionIdx]?.trim() || '',
+      notes: cols[notesIdx]?.trim() || '',
     });
   }
 

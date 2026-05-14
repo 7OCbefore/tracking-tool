@@ -2,47 +2,52 @@ import { useState, useEffect } from 'react';
 import { usePackageStore } from '@/stores/packageStore';
 import { useUIStore } from '@/stores/uiStore';
 
-const COMPANY_OPTIONS = ['顺丰', '中通', '圆通', '申通', '韵达', '京东', 'EMS', '百世', '德邦', '其他'];
-
 export default function AddForm() {
   const add = usePackageStore((s) => s.add);
   const goBack = useUIStore((s) => s.goBack);
   const showToast = useUIStore((s) => s.showToast);
 
-  const [trackingNumber, setTrackingNumber] = useState('');
-  const [company, setCompany] = useState('');
-  const [remark, setRemark] = useState('');
+  const [number, setNumber] = useState('');
+  const [customer, setCustomer] = useState('');
+  const [region, setRegion] = useState('');
+  const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const lastCompany = localStorage.getItem('tracking_last_company');
-    if (lastCompany) setCompany(lastCompany);
+    // 自动记忆：加载上次输入的客户和地区
+    const lastCustomer = localStorage.getItem('tracking_last_customer');
+    const lastRegion = localStorage.getItem('tracking_last_region');
+    if (lastCustomer) setCustomer(lastCustomer);
+    if (lastRegion) setRegion(lastRegion);
 
+    // 读取扫码结果
     const scanResult = sessionStorage.getItem('scan_result');
     if (scanResult) {
-      setTrackingNumber(scanResult);
+      setNumber(scanResult);
       sessionStorage.removeItem('scan_result');
     }
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!trackingNumber.trim()) {
+    if (!number.trim()) {
       showToast('请填写快递单号', 'error');
       return;
     }
-    if (!company.trim()) {
-      showToast('请选择或填写快递公司', 'error');
+    if (!customer.trim() && !region.trim()) {
+      showToast('客户名称和地区至少填写一个', 'error');
       return;
     }
     setSaving(true);
     try {
       await add({
-        trackingNumber: trackingNumber.trim(),
-        company: company.trim() === '其他' ? '' : company.trim(),
-        remark: remark.trim(),
+        number: number.trim(),
+        customer: customer.trim(),
+        region: region.trim(),
+        notes: notes.trim(),
       });
-      localStorage.setItem('tracking_last_company', company.trim());
+      localStorage.setItem('tracking_last_customer', customer.trim());
+      localStorage.setItem('tracking_last_region', region.trim());
       showToast('添加成功', 'success');
       goBack();
     } catch {
@@ -70,8 +75,8 @@ export default function AddForm() {
           </label>
           <input
             type="text"
-            value={trackingNumber}
-            onChange={(e) => setTrackingNumber(e.target.value)}
+            value={number}
+            onChange={(e) => setNumber(e.target.value)}
             placeholder="输入快递单号"
             autoFocus
             className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 text-base
@@ -81,34 +86,38 @@ export default function AddForm() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            快递公司 <span className="text-danger">*</span>
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {COMPANY_OPTIONS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setCompany(c)}
-                className={`px-3 py-1.5 text-sm rounded-lg border transition-colors
-                  ${company === c
-                    ? 'bg-brand text-white border-brand'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-brand'
-                  }`}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">客户名称（选填）</label>
+          <input
+            type="text"
+            value={customer}
+            onChange={(e) => setCustomer(e.target.value)}
+            placeholder="输入客户名称（选填）"
+            className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 text-base
+                       focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand
+                       placeholder:text-gray-300"
+          />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">备注</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">地区（选填）</label>
           <input
             type="text"
-            value={remark}
-            onChange={(e) => setRemark(e.target.value)}
-            placeholder="物品名称、购买渠道等（可选）"
+            value={region}
+            onChange={(e) => setRegion(e.target.value)}
+            placeholder="如：上海、北京、广东（选填）"
+            className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 text-base
+                       focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand
+                       placeholder:text-gray-300"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">备注（可选）</label>
+          <input
+            type="text"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="如：订单号、商品名称"
             className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 text-base
                        focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand
                        placeholder:text-gray-300"

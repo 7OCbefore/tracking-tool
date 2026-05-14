@@ -17,14 +17,14 @@ export async function getArchivedPackages(
 
 export async function archivePackage(id: string): Promise<void> {
   await db.packages.update(id, {
-    isArchived: true,
+    isArchived: 1,
     archivedAt: Date.now(),
   });
 }
 
 export async function restorePackage(id: string): Promise<void> {
   await db.packages.update(id, {
-    isArchived: false,
+    isArchived: 0,
     archivedAt: undefined,
   });
 }

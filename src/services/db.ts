@@ -13,7 +13,7 @@ export class TrackingDB extends Dexie {
   constructor() {
     super('TrackingDB');
     this.version(1).stores({
-      packages: 'id, status, isArchived, createdAt, trackingNumber',
+      packages: 'id, status, isArchived, createdAt, number',
       meta: 'key',
     });
   }

@@ -30,8 +30,11 @@ function createPackage(input: PackageInput): Package {
     ...input,
     id: crypto.randomUUID(),
     status: 'pending',
-    isArchived: false,
+    isArchived: 0,
     createdAt: Date.now(),
+    notes: input.notes || '',
+    customer: input.customer || '',
+    region: input.region || '',
   };
 }
 
@@ -47,6 +50,7 @@ export const usePackageStore = create<PackageState>((set, get) => ({
     const { activeTab, searchQuery } = get();
     set({ isLoading: true });
 
+    // Filter: isArchived must be 0 (not archived), match active tab
     let collection = db.packages
       .where('isArchived').equals(0)
       .filter((p) => p.status === activeTab);
@@ -55,9 +59,10 @@ export const usePackageStore = create<PackageState>((set, get) => ({
       const q = searchQuery.toLowerCase();
       collection = collection.filter(
         (p) =>
-          p.trackingNumber.toLowerCase().includes(q) ||
-          p.company.toLowerCase().includes(q) ||
-          p.remark.toLowerCase().includes(q),
+          (p.number || '').toLowerCase().includes(q) ||
+          (p.customer || '').toLowerCase().includes(q) ||
+          (p.region || '').toLowerCase().includes(q) ||
+          (p.notes || '').toLowerCase().includes(q),
       );
     }
 
@@ -129,8 +134,8 @@ export const usePackageStore = create<PackageState>((set, get) => ({
     for (const record of records) {
       const pkg = createPackage(record);
       const existing = await db.packages
-        .where('trackingNumber')
-        .equals(record.trackingNumber)
+        .where('number')
+        .equals(record.number)
         .first();
       if (!existing) {
         await db.packages.add(pkg);
@@ -144,12 +149,11 @@ export const usePackageStore = create<PackageState>((set, get) => ({
   exportCSV: () => {
     const { packages } = get();
     if (packages.length === 0) return;
-    // Dynamic import to avoid circular dependency
     import('@/services/csv').then(({ downloadCSV }) => downloadCSV(packages));
   },
 
   archive: async (id) => {
-    await db.packages.update(id, { isArchived: true, archivedAt: Date.now() });
+    await db.packages.update(id, { isArchived: 1, archivedAt: Date.now() });
     await get().loadPage();
   },
 }));

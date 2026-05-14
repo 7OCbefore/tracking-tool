@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useUIStore } from '@/stores/uiStore';
 import { usePackageStore } from '@/stores/packageStore';
 import { db } from '@/services/db';
-import { formatDateTime, normalizeCompany } from '@/utils/format';
+import { formatDateTime } from '@/utils/format';
 import Modal from '@/components/ui/Modal';
 import type { Package } from '@/types/package';
 
@@ -33,7 +33,7 @@ export default function PackageDetail() {
   const handleDelete = async () => {
     const [removed] = await remove(pkg.id);
     setShowDeleteModal(false);
-    showToast(`已删除 ${removed.trackingNumber}`, 'undo', async () => {
+    showToast(`已删除 ${removed.number}`, 'undo', async () => {
       await db.packages.add(removed);
       showToast('已撤销删除', 'success');
     });
@@ -69,13 +69,14 @@ export default function PackageDetail() {
             </span>
           </div>
           <p className="font-mono text-xl tracking-wider text-gray-900 break-all">
-            {pkg.trackingNumber}
+            {pkg.number}
           </p>
         </div>
 
         <div className="bg-white rounded-2xl p-5 shadow-sm space-y-3">
-          <DetailRow label="快递公司" value={normalizeCompany(pkg.company)} />
-          <DetailRow label="备注" value={pkg.remark || '无'} />
+          <DetailRow label="客户名称" value={pkg.customer || '未填写'} />
+          <DetailRow label="地区" value={pkg.region || '未填写'} />
+          <DetailRow label="备注" value={pkg.notes || '无'} />
           <DetailRow label="录入时间" value={formatDateTime(pkg.createdAt)} />
           {pkg.receivedAt && (
             <DetailRow label="签收时间" value={formatDateTime(pkg.receivedAt)} />
@@ -106,7 +107,7 @@ export default function PackageDetail() {
       <Modal
         open={showDeleteModal}
         title="确认删除"
-        message={`确定要删除快递单号「${pkg.trackingNumber}」吗？可在 5 秒内撤销。`}
+        message={`确定要删除快递单号「${pkg.number}」吗？可在 5 秒内撤销。`}
         confirmLabel="删除"
         danger
         onConfirm={handleDelete}

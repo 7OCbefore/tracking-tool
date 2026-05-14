@@ -1,7 +1,7 @@
 import type { Package } from '@/types/package';
 import { useUIStore } from '@/stores/uiStore';
 import { usePackageStore } from '@/stores/packageStore';
-import { formatDate, normalizeCompany } from '@/utils/format';
+import { formatDate } from '@/utils/format';
 
 interface PackageCardProps {
   pkg: Package;
@@ -58,7 +58,7 @@ export default function PackageCard({ pkg, isBatchMode, isSelected }: PackageCar
       <div className={isBatchMode ? 'ml-8' : ''}>
         <div className="flex items-center justify-between">
           <span className="font-mono text-base tracking-wider text-gray-900">
-            {pkg.trackingNumber}
+            {pkg.number}
           </span>
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusBadge}`}>
             {statusText}
@@ -66,14 +66,17 @@ export default function PackageCard({ pkg, isBatchMode, isSelected }: PackageCar
         </div>
 
         <div className="flex items-center gap-2 mt-1.5">
-          <span className="text-xs text-brand bg-brand-light px-2 py-0.5 rounded">
-            {normalizeCompany(pkg.company)}
-          </span>
+          {pkg.customer && (
+            <span className="text-xs text-brand bg-brand-light px-2 py-0.5 rounded">👤 {pkg.customer}</span>
+          )}
+          {pkg.region && (
+            <span className="text-xs text-gray-400">📍 {pkg.region}</span>
+          )}
           <span className="text-xs text-gray-400">{formatDate(pkg.createdAt)}</span>
         </div>
 
-        {pkg.remark && (
-          <p className="text-sm text-gray-500 mt-1.5 truncate">{pkg.remark}</p>
+        {pkg.notes && (
+          <p className="text-sm text-gray-500 mt-1.5 truncate">{pkg.notes}</p>
         )}
       </div>
 

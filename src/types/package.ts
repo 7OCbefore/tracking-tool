@@ -2,17 +2,18 @@ export type PackageStatus = 'pending' | 'received';
 
 export interface Package {
   id: string;
-  trackingNumber: string;
-  company: string;
-  remark: string;
+  number: string;
+  customer: string;
+  region: string;
+  notes: string;
   status: PackageStatus;
-  isArchived: boolean;
+  isArchived: number;     // 0 = active, 1 = archived (number for IndexedDB index compatibility)
   createdAt: number;
   receivedAt?: number;
   archivedAt?: number;
 }
 
-export type PackageInput = Omit<Package, 'id' | 'createdAt' | 'status' | 'isArchived'>;
+export type PackageInput = Omit<Package, 'id' | 'createdAt' | 'status' | 'isArchived' | 'receivedAt' | 'archivedAt'>;
 
 export type TabType = 'pending' | 'received';
 
