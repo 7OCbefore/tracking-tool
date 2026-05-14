@@ -33,9 +33,7 @@ export default function PackageCard({ pkg, isBatchMode, isSelected }: PackageCar
 
   const handleToggleStatus = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isPending) {
-      toggleStatus(pkg.id);
-    }
+    toggleStatus(pkg.id);
   };
 
   return (
@@ -92,17 +90,25 @@ export default function PackageCard({ pkg, isBatchMode, isSelected }: PackageCar
         )}
       </div>
 
-      {isPending && !isBatchMode && (
+      {!isBatchMode && (
         <button
           onClick={handleToggleStatus}
-          className="absolute top-3 right-3 w-7 h-7 rounded-full border-2 border-gray-300
-                     flex items-center justify-center text-gray-300 hover:border-green-400
-                     hover:text-green-400 active:bg-green-50 transition-colors"
-          aria-label="标记已收到"
+          className={`absolute top-3 right-3 w-7 h-7 rounded-full border-2 flex items-center justify-center transition-colors
+            ${isPending
+              ? 'border-gray-300 text-gray-300 hover:border-green-400 hover:text-green-400 active:bg-green-50'
+              : 'border-gray-200 text-gray-300 hover:border-orange-400 hover:text-orange-400 active:bg-orange-50'
+            }`}
+          aria-label={isPending ? '标记已收到' : '撤销标记'}
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-          </svg>
+          {isPending ? (
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          )}
         </button>
       )}
 
