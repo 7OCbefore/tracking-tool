@@ -9,13 +9,16 @@ interface UseBarcodeDetectorResult {
 }
 
 export function useBarcodeDetector(
-  onDetected: (code: string) => void,
+  onDetected?: (code: string) => void,
 ): UseBarcodeDetectorResult {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const rafRef = useRef<number>(0);
   const streamRef = useRef<MediaStream | null>(null);
+  const lastCodeRef = useRef<string>('');
+  const onDetectedRef = useRef(onDetected);
+  onDetectedRef.current = onDetected;
 
   const stopScanning = () => {
     cancelAnimationFrame(rafRef.current);
@@ -31,13 +34,16 @@ export function useBarcodeDetector(
 
     try {
       const detector = new (window as any).BarcodeDetector({
-        formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'qr_code'],
+        formats: ['code_128', 'code_39', 'code_93', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf'],
       });
       const barcodes = await detector.detect(videoRef.current);
       if (barcodes.length > 0) {
-        onDetected(barcodes[0].rawValue);
-        stopScanning();
-        return;
+        const code = barcodes[0].rawValue.trim();
+        // Dedup: only fire on new code
+        if (code !== lastCodeRef.current) {
+          lastCodeRef.current = code;
+          onDetectedRef.current?.(code);
+        }
       }
     } catch {
       // BarcodeDetector may throw on some frames
@@ -47,6 +53,7 @@ export function useBarcodeDetector(
 
   const startScanning = async () => {
     setError(null);
+    lastCodeRef.current = '';
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment' },

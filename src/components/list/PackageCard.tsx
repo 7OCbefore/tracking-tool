@@ -63,9 +63,11 @@ export default function PackageCard({ pkg, isBatchMode, isSelected }: PackageCar
             className="font-mono text-base tracking-wider text-gray-900"
             dangerouslySetInnerHTML={{ __html: highlightText(pkg.number, searchQuery) }}
           />
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusBadge}`}>
-            {statusText}
-          </span>
+          {(!isPending || isBatchMode) && (
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusBadge}`}>
+              {statusText}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2 mt-1.5">
