@@ -56,7 +56,12 @@ export function useBarcodeDetector(
     lastCodeRef.current = '';
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
+        video: {
+          facingMode: 'environment',
+          width: { min: 640, ideal: 1280 },
+          height: { min: 480, ideal: 720 },
+          advanced: [{ focusMode: 'continuous' }] as any,
+        },
       });
       streamRef.current = stream;
       if (videoRef.current) {

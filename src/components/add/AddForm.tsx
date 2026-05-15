@@ -32,11 +32,13 @@ export default function AddForm() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    // 自动记忆：加载上次输入的客户和地区
+    // 自动记忆：加载上次输入的客户、地区和备注
     const lastCustomer = localStorage.getItem('tracking_last_customer');
     const lastRegion = localStorage.getItem('tracking_last_region');
+    const lastNotes = localStorage.getItem('tracking_last_notes');
     if (lastCustomer) setCustomer(lastCustomer);
     if (lastRegion) setRegion(lastRegion);
+    if (lastNotes) setNotes(lastNotes);
 
     // 读取扫码结果
     const scanResult = sessionStorage.getItem('scan_result');
@@ -71,6 +73,7 @@ export default function AddForm() {
       });
       localStorage.setItem('tracking_last_customer', customer.trim());
       localStorage.setItem('tracking_last_region', region.trim());
+      localStorage.setItem('tracking_last_notes', notes.trim());
       return true;
     } catch {
       showToast('添加失败，请重试', 'error');
