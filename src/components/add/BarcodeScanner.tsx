@@ -55,7 +55,7 @@ export default function BarcodeScanner() {
     }
   }, [triggerFlash]);
 
-  const { videoRef, scanning, error, startScanning, stopScanning } =
+  const { videoRef, scanning, error, torchOn, startScanning, stopScanning, toggleTorch } =
     useBarcodeDetector(handleDetected);
 
   useEffect(() => {
@@ -89,9 +89,22 @@ export default function BarcodeScanner() {
           </svg>
         </button>
         <span className="text-white text-sm font-medium">扫码匹配</span>
-        <span className="text-white text-sm font-mono tabular-nums min-w-[4rem] text-right">
-          {scanCount > 0 ? `✓ ${scanCount}单` : ''}
-        </span>
+        <div className="flex items-center gap-2 min-w-[4rem] justify-end">
+          {scanning && (
+            <button
+              onClick={toggleTorch}
+              className={`p-1.5 rounded-full transition-colors ${torchOn ? 'bg-yellow-400 text-black' : 'text-white/70'}`}
+              aria-label="闪光灯"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </button>
+          )}
+          <span className="text-white text-sm font-mono tabular-nums">
+            {scanCount > 0 ? `✓ ${scanCount}单` : ''}
+          </span>
+        </div>
       </div>
 
       {/* Camera + flash overlay */}

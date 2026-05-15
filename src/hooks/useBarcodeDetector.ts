@@ -4,8 +4,10 @@ interface UseBarcodeDetectorResult {
   videoRef: React.RefObject<HTMLVideoElement | null>;
   scanning: boolean;
   error: string | null;
+  torchOn: boolean;
   startScanning: () => Promise<void>;
   stopScanning: () => void;
+  toggleTorch: () => Promise<void>;
 }
 
 export function useBarcodeDetector(
@@ -14,6 +16,7 @@ export function useBarcodeDetector(
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [torchOn, setTorchOn] = useState(false);
   const rafRef = useRef<number>(0);
   const streamRef = useRef<MediaStream | null>(null);
   const lastCodeRef = useRef<string>('');
@@ -27,6 +30,7 @@ export function useBarcodeDetector(
       streamRef.current = null;
     }
     setScanning(false);
+    setTorchOn(false);
   };
 
   const detectLoop = async () => {
@@ -39,7 +43,6 @@ export function useBarcodeDetector(
       const barcodes = await detector.detect(videoRef.current);
       if (barcodes.length > 0) {
         const code = barcodes[0].rawValue.trim();
-        // Dedup: only fire on new code
         if (code !== lastCodeRef.current) {
           lastCodeRef.current = code;
           onDetectedRef.current?.(code);
@@ -54,13 +57,17 @@ export function useBarcodeDetector(
   const startScanning = async () => {
     setError(null);
     lastCodeRef.current = '';
+    setTorchOn(false);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: 'environment',
-          width: { min: 640, ideal: 1280 },
-          height: { min: 480, ideal: 720 },
-          advanced: [{ focusMode: 'continuous' }] as any,
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          advanced: [
+            { focusMode: 'continuous' },
+            { exposureMode: 'continuous' },
+          ] as any,
         },
       });
       streamRef.current = stream;
@@ -75,6 +82,26 @@ export function useBarcodeDetector(
     }
   };
 
+  const toggleTorch = async () => {
+    if (!streamRef.current) return;
+    const track = streamRef.current.getVideoTracks()[0];
+    if (!track) return;
+    const capabilities = track.getCapabilities?.() as { torch?: boolean } | undefined;
+    if (!capabilities?.torch) {
+      setError('该设备不支持闪光灯');
+      setTimeout(() => setError(null), 2000);
+      return;
+    }
+    const newState = !torchOn;
+    try {
+      await track.applyConstraints({ advanced: [{ torch: newState }] as any });
+      setTorchOn(newState);
+    } catch {
+      setError('无法切换闪光灯');
+      setTimeout(() => setError(null), 2000);
+    }
+  };
+
   useEffect(() => {
     return () => {
       cancelAnimationFrame(rafRef.current);
@@ -82,5 +109,5 @@ export function useBarcodeDetector(
     };
   }, []);
 
-  return { videoRef, scanning, error, startScanning, stopScanning };
+  return { videoRef, scanning, error, torchOn, startScanning, stopScanning, toggleTorch };
 }
