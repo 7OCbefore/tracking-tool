@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useBarcodeDetector } from '@/hooks/useBarcodeDetector';
 import { useUIStore } from '@/stores/uiStore';
 import { db } from '@/services/db';
@@ -14,9 +14,12 @@ interface MatchResult {
 export default function BarcodeScanner() {
   const goBack = useUIStore((s) => s.goBack);
   const navigate = useUIStore((s) => s.navigate);
+  const scanMode = useUIStore((s) => s.scanMode);
   const [scanCount, setScanCount] = useState(0);
   const [lastResult, setLastResult] = useState<MatchResult | null>(null);
   const [flash, setFlash] = useState<'green' | 'orange' | null>(null);
+  const [addingCode, setAddingCode] = useState<string | null>(null);
+  const stopRef = useRef<(() => void) | null>(null);
 
   const triggerFlash = useCallback((color: 'green' | 'orange') => {
     setFlash(color);
@@ -24,6 +27,20 @@ export default function BarcodeScanner() {
   }, []);
 
   const handleDetected = useCallback(async (code: string) => {
+    // Add mode: save code and navigate back to add form
+    if (scanMode === 'add') {
+      setAddingCode(code);
+      triggerFlash('green');
+      if (navigator.vibrate) navigator.vibrate(50);
+      sessionStorage.setItem('scan_result', code);
+      setTimeout(() => {
+        stopRef.current?.();
+        navigate('add');
+      }, 600);
+      return;
+    }
+
+    // Match mode: look up in database
     try {
       const all = await db.packages
         .where('isArchived')
@@ -53,10 +70,12 @@ export default function BarcodeScanner() {
     } catch {
       // Silently continue scanning
     }
-  }, [triggerFlash]);
+  }, [triggerFlash, scanMode, navigate]);
 
   const { videoRef, scanning, error, torchOn, startScanning, stopScanning, toggleTorch } =
     useBarcodeDetector(handleDetected);
+
+  stopRef.current = stopScanning;
 
   useEffect(() => {
     startScanning();
@@ -65,7 +84,11 @@ export default function BarcodeScanner() {
 
   const handleClose = () => {
     stopScanning();
-    goBack();
+    if (scanMode === 'add') {
+      navigate('add');
+    } else {
+      goBack();
+    }
   };
 
   const handleViewDetail = () => {
@@ -88,7 +111,7 @@ export default function BarcodeScanner() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-        <span className="text-white text-sm font-medium">扫码匹配</span>
+        <span className="text-white text-sm font-medium">{scanMode === 'add' ? '扫码添加' : '扫码匹配'}</span>
         <div className="flex items-center gap-2 min-w-[4rem] justify-end">
           {scanning && (
             <button
@@ -102,7 +125,7 @@ export default function BarcodeScanner() {
             </button>
           )}
           <span className="text-white text-sm font-mono tabular-nums">
-            {scanCount > 0 ? `✓ ${scanCount}单` : ''}
+            {scanMode !== 'add' && scanCount > 0 ? `✓ ${scanCount}单` : ''}
           </span>
         </div>
       </div>
@@ -118,7 +141,20 @@ export default function BarcodeScanner() {
         </div>
 
         {/* Result card */}
-        {lastResult && (
+        {addingCode && scanMode === 'add' && (
+          <div className="absolute bottom-4 left-4 right-4 z-20">
+            <div className="bg-white rounded-2xl p-4 shadow-xl animate-slide-up text-center">
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <span className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs font-bold">✓</span>
+                <span className="text-sm font-medium text-green-700">已识别</span>
+              </div>
+              <p className="font-mono text-lg font-semibold text-gray-900 tracking-wider">{addingCode}</p>
+              <p className="text-xs text-gray-400 mt-1">正在返回添加页面...</p>
+            </div>
+          </div>
+        )}
+
+        {lastResult && scanMode !== 'add' && (
           <div className="absolute bottom-4 left-4 right-4 z-20">
             {lastResult.type === 'match' && lastResult.pkg ? (
               <div className="bg-white rounded-2xl p-4 shadow-xl animate-slide-up">

@@ -10,6 +10,7 @@ interface UIState {
   toastType: ToastType;
   toastUndoAction: (() => void) | null;
   searchToAdd: string | null;
+  scanMode: 'match' | 'add';
 
   navigate: (screen: Screen, params?: { id?: string }) => void;
   goBack: () => void;
@@ -20,6 +21,7 @@ interface UIState {
   showToast: (message: string, type: ToastType, undoAction?: () => void) => void;
   hideToast: () => void;
   setSearchToAdd: (query: string | null) => void;
+  setScanMode: (mode: 'match' | 'add') => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -32,13 +34,16 @@ export const useUIStore = create<UIState>((set) => ({
   toastUndoAction: null,
   searchToAdd: null,
 
+  scanMode: 'match',
+
   navigate: (screen, params) => {
-    set({
+    set((state) => ({
       currentScreen: screen,
       detailId: params?.id ?? null,
       batchMode: false,
       selectedIds: new Set(),
-    });
+      scanMode: screen === 'scan' ? state.scanMode : 'match',
+    }));
   },
 
   goBack: () => {
@@ -47,6 +52,7 @@ export const useUIStore = create<UIState>((set) => ({
       detailId: null,
       batchMode: false,
       selectedIds: new Set(),
+      scanMode: 'match',
     });
   },
 
@@ -86,4 +92,5 @@ export const useUIStore = create<UIState>((set) => ({
   },
 
   setSearchToAdd: (query) => set({ searchToAdd: query }),
+  setScanMode: (mode) => set({ scanMode: mode }),
 }));

@@ -111,3 +111,38 @@ export function useBarcodeDetector(
 
   return { videoRef, scanning, error, torchOn, startScanning, stopScanning, toggleTorch };
 }
+
+/**
+ * Detect a barcode from a static image file.
+ * Uses the Browser BarcodeDetector API on an HTMLImageElement.
+ * Returns the first detected barcode rawValue, or null if none found.
+ */
+export async function detectBarcodeFromImage(file: File): Promise<string | null> {
+  if (!('BarcodeDetector' in window)) {
+    throw new Error('当前浏览器不支持条码识别');
+  }
+
+  const img = new Image();
+  const url = URL.createObjectURL(file);
+
+  return new Promise((resolve, reject) => {
+    img.onload = async () => {
+      try {
+        const detector = new (window as any).BarcodeDetector({
+          formats: ['code_128', 'code_39', 'code_93', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf'],
+        });
+        const barcodes = await detector.detect(img);
+        URL.revokeObjectURL(url);
+        resolve(barcodes.length > 0 ? barcodes[0].rawValue.trim() : null);
+      } catch {
+        URL.revokeObjectURL(url);
+        resolve(null);
+      }
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('无法加载图片'));
+    };
+    img.src = url;
+  });
+}
