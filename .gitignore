@@ -2,3 +2,10 @@ node_modules
 dist
 *.tsbuildinfo
 *.local
+
+# pi agent generated files
+.pi/npm/
+.pi/git/
+
+# CodeGraph knowledge graph (local index)
+.codegraph/
