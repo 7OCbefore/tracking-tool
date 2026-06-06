@@ -6,13 +6,25 @@ const TABS: { key: TabType; label: string }[] = [
   { key: 'received', label: '已收到' },
 ];
 
+function hasActiveFilters(f: { datePreset: unknown; customer: string; region: string }): boolean {
+  return !!(f.datePreset || f.customer || f.region);
+}
+
 export default function TabBar() {
   const activeTab = usePackageStore((s) => s.activeTab);
   const setTab = usePackageStore((s) => s.setTab);
+  const filters = usePackageStore((s) => s.filters);
+  const filtering = hasActiveFilters(filters);
 
   return (
     <nav className="flex border-b border-gray-200 bg-white">
-      {TABS.map((tab) => (
+      {filtering && (
+        <div className="flex-1 py-3 text-center text-sm font-medium text-brand">
+          全部
+          <span className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-brand" />
+        </div>
+      )}
+      {!filtering && TABS.map((tab) => (
         <button
           key={tab.key}
           onClick={() => setTab(tab.key)}

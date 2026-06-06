@@ -2,6 +2,7 @@ import { useUIStore } from '@/stores/uiStore';
 import Header from '@/components/layout/Header';
 import TabBar from '@/components/layout/TabBar';
 import SearchBar from '@/components/layout/SearchBar';
+import FilterBar from '@/components/layout/FilterBar';
 import PackageList from '@/components/list/PackageList';
 import BatchBar from '@/components/list/BatchBar';
 import FabMenu from '@/components/layout/FabMenu';
@@ -22,6 +23,7 @@ export default function App() {
       <Header />
       <TabBar />
       <SearchBar />
+      <FilterBar />
       <PackageList />
       <BatchBar />
       <FabMenu />

@@ -20,3 +20,13 @@ export type TabType = 'pending' | 'received';
 export type Screen = 'list' | 'add' | 'detail' | 'scan';
 
 export type ToastType = 'success' | 'error' | 'undo';
+
+export type DatePreset = 'today' | 'week' | 'month' | 'custom';
+
+export interface FilterState {
+  datePreset: DatePreset | null;
+  dateFrom: string | null;  // 'YYYY-MM-DD'
+  dateTo: string | null;    // 'YYYY-MM-DD'
+  customer: string;
+  region: string;
+}
